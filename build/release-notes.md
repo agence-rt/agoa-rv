@@ -1,1 +1,1 @@
-Déploiement n°12 — Nouveau nom AGOA PV ; installateur avec choix du dossier d'installation
+Déploiement n°13 — Ouverture directe des fichiers .pv ; confirmation et enregistrement à la fermeture ; en-tête SELARL REMI THOLLET ARCHITECTE (SIRET, TVA) ; bouton Opération
