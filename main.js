@@ -131,16 +131,38 @@ function setupUpdates() {
   } catch (e) { console.warn(e); }
 }
 
+/* ---------- écran de démarrage ---------- */
+let splash = null, splashAt = 0;
+function showSplash() {
+  splash = new BrowserWindow({ width: 560, height: 300, frame: false, resizable: false, movable: true, center: true, show: false,
+    skipTaskbar: true, alwaysOnTop: true, backgroundColor: "#FFFFFF", icon: path.join(__dirname, "build", "icon.ico"),
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  splash.loadFile(path.join(__dirname, "app", "splash.html"), { query: { v: INFO.version, d: String(INFO.deploiement) } });
+  splash.once("ready-to-show", () => { splash.show(); splashAt = Date.now(); });
+}
+let revealed = false;
+function revealMain() {
+  if (revealed) return; revealed = true;
+  const wait = Math.max(0, 1800 - (Date.now() - (splashAt || Date.now()))); // le logo reste au moins 1,8 s
+  setTimeout(() => {
+    if (win && !win.isDestroyed()) { win.show(); win.focus(); }
+    if (splash && !splash.isDestroyed()) splash.close();
+    splash = null;
+  }, wait);
+}
+
 /* ---------- fenêtre ---------- */
 function createWindow() {
   win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 900, minHeight: 600,
     title: `AGOA PV — v${INFO.version}`, icon: path.join(__dirname, "build", "icon.ico"),
-    autoHideMenuBar: true, backgroundColor: "#EEF0ED",
+    autoHideMenuBar: true, backgroundColor: "#EEF0ED", show: false,
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: false }
   });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); return { action: "deny" }; });
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) { e.preventDefault(); if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); } });
+  win.once("ready-to-show", revealMain);
+  setTimeout(revealMain, 8000); // sécurité : la fenêtre s'affiche quoi qu'il arrive
   win.webContents.on("did-finish-load", () => { ready = true; if (pendingFile) { win.webContents.send("open-file", pendingFile.name, pendingFile.text, pendingFile.file); pendingFile = null; } });
   win.on("close", e => {
     if (allowClose) return;
@@ -250,6 +272,6 @@ if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
   app.on("second-instance", (e, argv) => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } openAgoarv(agoarvFromArgs(argv)); });
   app.on("open-file", (e, file) => { e.preventDefault(); openAgoarv(file); });
-  app.whenReady().then(() => { migrateOldData(); createWindow(); openAgoarv(agoarvFromArgs(process.argv)); setupUpdates(); });
+  app.whenReady().then(() => { migrateOldData(); showSplash(); createWindow(); openAgoarv(agoarvFromArgs(process.argv)); setupUpdates(); });
   app.on("window-all-closed", () => app.quit());
 }
