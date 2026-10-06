@@ -1,1 +1,1 @@
-Déploiement n°11 — Recherche de mise à jour au lancement, avec proposition et nouveautés
+Déploiement n°12 — Nouveau nom AGOA PV ; installateur avec choix du dossier d'installation
