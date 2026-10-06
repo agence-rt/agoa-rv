@@ -134,7 +134,7 @@ function setupUpdates() {
 /* ---------- écran de démarrage ---------- */
 let splash = null, splashAt = 0;
 function showSplash() {
-  splash = new BrowserWindow({ width: 560, height: 300, frame: false, resizable: false, movable: true, center: true, show: false,
+  splash = new BrowserWindow({ width: 520, height: 330, frame: false, resizable: false, movable: true, center: true, show: false,
     skipTaskbar: true, alwaysOnTop: true, backgroundColor: "#FFFFFF", icon: path.join(__dirname, "build", "icon.ico"),
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true } });
   splash.loadFile(path.join(__dirname, "app", "splash.html"), { query: { v: INFO.version, d: String(INFO.deploiement) } });
