@@ -1,5 +1,5 @@
 "use strict";
-// AGOA RV — processus principal Electron
+// AGOA PV — processus principal Electron
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -11,7 +11,7 @@ let win = null;
 let pendingFile = null; // fichier .pv à ouvrir dès que l'interface est prête
 let ready = false;
 
-/* ---------- fichiers de données (dans %APPDATA%\AGOA RV) ---------- */
+/* ---------- fichiers de données (dans %APPDATA%\AGOA PV) ---------- */
 const userDir = () => app.getPath("userData");
 const dataPath = () => path.join(userDir(), "agoa-rv-donnees.json");
 const configPath = () => path.join(userDir(), "agoa-rv-config.json");
@@ -29,7 +29,7 @@ function agoarvFromArgs(argv) { return argv.find(a => /\.(pv|agoarv)$/i.test(a) 
 function openAgoarv(file) {
   if (!file) return;
   let text;
-  try { text = fs.readFileSync(file, "utf8"); } catch (e) { dialog.showErrorBox("AGOA RV", "Impossible de lire " + file); return; }
+  try { text = fs.readFileSync(file, "utf8"); } catch (e) { dialog.showErrorBox("AGOA PV", "Impossible de lire " + file); return; }
   if (win && ready) win.webContents.send("open-file", path.basename(file), text, file);
   else pendingFile = { name: path.basename(file), text, file };
 }
@@ -93,15 +93,15 @@ async function proposeUpdate(info) {
   const r = await dialog.showMessageBox(win, {
     type: "info", buttons: ["Mettre à jour maintenant", "Plus tard"], defaultId: 0, cancelId: 1, noLink: true,
     title: "Mise à jour disponible",
-    message: `AGOA RV ${info.version} est disponible.`,
+    message: `AGOA PV ${info.version} est disponible.`,
     detail: `Version installée : ${INFO.version} (déploiement n°${INFO.deploiement}).` + (notes ? `\n\nNouveautés :\n${notes}` : "") +
       "\n\nLa mise à jour se télécharge puis l'application redémarre. Vos dossiers et fichiers .pv ne sont pas modifiés."
   });
   if (r.response !== 0) { updateState = "idle"; return; }
   updateState = "downloading";
-  win.setTitle(`AGOA RV — téléchargement de la mise à jour ${info.version}…`);
+  win.setTitle(`AGOA PV — téléchargement de la mise à jour ${info.version}…`);
   updater.downloadUpdate().catch(err => {
-    updateState = "idle"; win.setProgressBar(-1); win.setTitle(`AGOA RV — v${INFO.version}`);
+    updateState = "idle"; win.setProgressBar(-1); win.setTitle(`AGOA PV — v${INFO.version}`);
     dialog.showErrorBox("Mise à jour", "Le téléchargement a échoué : " + (err && err.message ? err.message : err));
   });
 }
@@ -114,7 +114,7 @@ function setupUpdates() {
     updater.on("update-available", info => { proposeUpdate(info); });
     updater.on("download-progress", p => {
       win.setProgressBar(p.percent / 100);
-      win.setTitle(`AGOA RV — téléchargement de la mise à jour… ${Math.round(p.percent)} %`);
+      win.setTitle(`AGOA PV — téléchargement de la mise à jour… ${Math.round(p.percent)} %`);
     });
     updater.on("update-downloaded", () => {
       updateState = "ready"; win.setProgressBar(-1);
@@ -132,7 +132,7 @@ function setupUpdates() {
 function createWindow() {
   win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 900, minHeight: 600,
-    title: `AGOA RV — v${INFO.version}`, icon: path.join(__dirname, "build", "icon.ico"),
+    title: `AGOA PV — v${INFO.version}`, icon: path.join(__dirname, "build", "icon.ico"),
     autoHideMenuBar: true, backgroundColor: "#EEF0ED",
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: false }
   });
@@ -143,7 +143,7 @@ function createWindow() {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: "Fichier", submenu: [{ role: "quit", label: "Quitter" }] },
     { label: "Affichage", submenu: [{ role: "reload", label: "Recharger" }, { role: "zoomIn", label: "Zoom +" }, { role: "zoomOut", label: "Zoom −" }, { role: "resetZoom", label: "Zoom 100 %" }, { type: "separator" }, { role: "toggleDevTools", label: "Outils de développement" }] },
-    { label: "Aide", submenu: [{ label: `AGOA RV v${INFO.version} — déploiement n°${INFO.deploiement}`, enabled: false }] }
+    { label: "Aide", submenu: [{ label: `AGOA PV v${INFO.version} — déploiement n°${INFO.deploiement}`, enabled: false }] }
   ]));
 }
 
@@ -193,11 +193,25 @@ ipcMain.handle("check-updates", async () => {
   } catch (err) { updateState = "idle"; return "GitHub injoignable : vérifiez la connexion Internet."; }
 });
 
+/* ---------- reprise des données de l'ancien nom (AGOA RV → AGOA PV) ---------- */
+function migrateOldData() {
+  try {
+    const oldDir = path.join(app.getPath("appData"), "AGOA RV");
+    const newDir = userDir();
+    if (!fs.existsSync(oldDir) || fs.existsSync(dataPath())) return;
+    fs.mkdirSync(newDir, { recursive: true });
+    for (const f of ["agoa-rv-donnees.json", "agoa-rv-donnees.json.bak", "agoa-rv-config.json"]) {
+      const src = path.join(oldDir, f);
+      if (fs.existsSync(src) && !fs.existsSync(path.join(newDir, f))) fs.copyFileSync(src, path.join(newDir, f));
+    }
+  } catch (e) { console.warn("Reprise des données :", e.message); }
+}
+
 /* ---------- démarrage ---------- */
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
   app.on("second-instance", (e, argv) => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } openAgoarv(agoarvFromArgs(argv)); });
   app.on("open-file", (e, file) => { e.preventDefault(); openAgoarv(file); });
-  app.whenReady().then(() => { createWindow(); openAgoarv(agoarvFromArgs(process.argv)); setupUpdates(); });
+  app.whenReady().then(() => { migrateOldData(); createWindow(); openAgoarv(agoarvFromArgs(process.argv)); setupUpdates(); });
   app.on("window-all-closed", () => app.quit());
 }
