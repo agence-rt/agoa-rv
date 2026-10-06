@@ -1,0 +1,70 @@
+{
+  "name": "agoa-rv",
+  "productName": "AGOA RV",
+  "version": "0.9.0",
+  "description": "AGOA RV — suivi de chantier et procès-verbaux de réunion",
+  "author": "SELARL Rémi Thollet Architecte",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "agoa": {
+    "deploiement": 9
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "deploy": "node scripts/deploy.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "fr.remithollet.agoarv",
+    "productName": "AGOA RV",
+    "artifactName": "AGOA-RV-Setup-${version}.${ext}",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AGOA RV"
+    },
+    "fileAssociations": [
+      {
+        "ext": "agoarv",
+        "name": "AGOA RV",
+        "description": "Dossier de suivi de chantier AGOA RV",
+        "icon": "agoarv",
+        "role": "Editor"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "agence-rt",
+        "repo": "agoa-rv",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

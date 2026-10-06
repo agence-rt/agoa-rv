@@ -1,0 +1,31 @@
+# Fabrique l'installateur Windows et le publie comme Release GitHub
+# à chaque étiquette vX.Y.Z. Les postes installés se mettent à jour seuls.
+name: Publication Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installation des dépendances
+        run: npm ci
+
+      - name: Fabrication et publication
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
