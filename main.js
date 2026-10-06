@@ -10,6 +10,8 @@ const INFO = { version: pkg.version, deploiement: (pkg.agoa && pkg.agoa.deploiem
 let win = null;
 let pendingFile = null; // fichier .pv à ouvrir dès que l'interface est prête
 let ready = false;
+let allowClose = false;   // vrai une fois la fermeture confirmée (ou pendant une mise à jour)
+let closing = false;
 
 /* ---------- fichiers de données (dans %APPDATA%\AGOA PV) ---------- */
 const userDir = () => app.getPath("userData");
@@ -119,6 +121,7 @@ function setupUpdates() {
     updater.on("update-downloaded", () => {
       updateState = "ready"; win.setProgressBar(-1);
       win.webContents.executeJavaScript("typeof Store !== 'undefined' && Store.flush && Store.flush()").catch(() => {}).finally(() => {
+        allowClose = true;
         setTimeout(() => updater.quitAndInstall(true, true), 600); // installation silencieuse puis relance
       });
     });
@@ -139,12 +142,47 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); return { action: "deny" }; });
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) { e.preventDefault(); if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); } });
   win.webContents.on("did-finish-load", () => { ready = true; if (pendingFile) { win.webContents.send("open-file", pendingFile.name, pendingFile.text, pendingFile.file); pendingFile = null; } });
+  win.on("close", e => {
+    if (allowClose) return;
+    e.preventDefault();
+    if (!closing) confirmClose();
+  });
   win.loadFile(path.join(__dirname, "app", "index.html"));
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: "Fichier", submenu: [{ role: "quit", label: "Quitter" }] },
     { label: "Affichage", submenu: [{ role: "reload", label: "Recharger" }, { role: "zoomIn", label: "Zoom +" }, { role: "zoomOut", label: "Zoom −" }, { role: "resetZoom", label: "Zoom 100 %" }, { type: "separator" }, { role: "toggleDevTools", label: "Outils de développement" }] },
     { label: "Aide", submenu: [{ label: `AGOA PV v${INFO.version} — déploiement n°${INFO.deploiement}`, enabled: false }] }
   ]));
+}
+
+/* ---------- confirmation de fermeture ---------- */
+const js = code => win.webContents.executeJavaScript(code, true);
+async function confirmClose() {
+  closing = true;
+  try {
+    const info = await js("window.__agoaCloseInfo ? window.__agoaCloseInfo() : null").catch(() => null);
+    let buttons, detail, actions;
+    if (info && info.fichier) {
+      buttons = ["Enregistrer et fermer", "Annuler"]; actions = ["save", "cancel"];
+      detail = `L'opération ${info.code} sera enregistrée dans :\n${info.fichier}`;
+    } else if (info) {
+      buttons = ["Enregistrer le fichier .pv et fermer", "Fermer sans fichier .pv", "Annuler"]; actions = ["saveas", "close", "cancel"];
+      detail = `L'opération ${info.code} n'a pas encore de fichier .pv sur le disque.\nSes données restent enregistrées dans l'application.`;
+    } else {
+      buttons = ["Fermer", "Annuler"]; actions = ["close", "cancel"];
+      detail = "Les opérations sont enregistrées sur ce poste.";
+    }
+    const r = await dialog.showMessageBox(win, { type: "question", buttons, defaultId: 0, cancelId: buttons.length - 1, noLink: true, title: "Fermer AGOA PV", message: "Voulez-vous fermer AGOA PV ?", detail });
+    const act = actions[r.response];
+    if (act === "cancel") return;
+    if (act === "save") await js("window.__agoaSaveNow()");
+    if (act === "saveas") { const ok = await js("window.__agoaSaveAsNow()"); if (!ok) return; }
+    if (act === "close") await js("typeof Store !== 'undefined' && Store.flush && Store.flush()").catch(() => {});
+    allowClose = true; win.close();
+  } catch (err) {
+    const r = await dialog.showMessageBox(win, { type: "warning", buttons: ["Fermer quand même", "Annuler"], defaultId: 1, cancelId: 1, title: "Fermer AGOA PV", message: "L'enregistrement du fichier .pv a échoué.", detail: String(err && err.message || err) });
+    if (r.response === 0) { allowClose = true; win.close(); }
+  } finally { closing = false; }
 }
 
 /* ---------- IPC ---------- */
