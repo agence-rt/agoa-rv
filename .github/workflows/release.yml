@@ -1,11 +1,15 @@
 # Fabrique l'installateur Windows et le publie comme Release GitHub
-# à chaque étiquette vX.Y.Z. Les postes installés se mettent à jour seuls.
+# dès que la version de package.json change sur main (nouveau déploiement).
+# L'étiquette vX.Y.Z est créée automatiquement avec la Release.
+# Les postes installés se mettent ensuite à jour seuls.
 name: Publication Windows
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+    paths:
+      - "package.json"
   workflow_dispatch:
 
 permissions:
@@ -17,15 +21,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Version à publier
+        id: v
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "La Release v$VERSION existe déjà : rien à publier."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.v.outputs.skip == 'false'
         with:
           node-version: 22
           cache: npm
 
       - name: Installation des dépendances
+        if: steps.v.outputs.skip == 'false'
         run: npm ci
 
       - name: Fabrication et publication
+        if: steps.v.outputs.skip == 'false'
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

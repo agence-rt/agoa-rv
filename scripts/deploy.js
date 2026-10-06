@@ -1,5 +1,6 @@
 // Prépare un nouveau déploiement : incrémente le numéro, aligne la version,
-// met à jour l'interface, puis crée le commit et l'étiquette vX.Y.Z.
+// met à jour l'interface, puis crée le commit. GitHub Actions publie la Release
+// (et son étiquette vX.Y.Z) dès que la nouvelle version arrive sur main.
 // Usage : npm run deploy -- "Description de la mise à jour"
 "use strict";
 const fs = require("fs");
@@ -31,5 +32,4 @@ fs.writeFileSync(logPath, log.replace(/(# Déploiements AGOA RV\n\n)/, `$1- **n�
 const sh = c => execSync(c, { cwd: root, stdio: "inherit" });
 sh("git add -A");
 sh(`git commit -m "Déploiement n°${n} (v${version}) : ${note.replace(/"/g, "'")}"`);
-sh(`git tag v${version}`);
-console.log(`\nDéploiement n°${n} prêt (v${version}). Envoyez-le avec : git push && git push --tags`);
+console.log(`\nDéploiement n°${n} prêt (v${version}). Envoyez-le avec : git push`);

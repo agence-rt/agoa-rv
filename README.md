@@ -28,12 +28,12 @@ version en arrière-plan et propose de redémarrer. Aucune réinstallation.
 
 ```
 npm run deploy -- "Description de la mise à jour"
-git push && git push --tags
+git push
 ```
 
 Le script incrémente le numéro de déploiement, aligne la version (`0.<n>.0`), met à jour
-`DEPLOIEMENTS.md`, crée le commit et l'étiquette. GitHub Actions fabrique l'installateur
-et publie la Release.
+`DEPLOIEMENTS.md` et crée le commit. Dès que la nouvelle version arrive sur `main`,
+GitHub Actions fabrique l'installateur et publie la Release (étiquette `vX.Y.Z` comprise).
 
 ## Développement
 

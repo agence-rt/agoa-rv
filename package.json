@@ -5,6 +5,10 @@
   "description": "AGOA RV — suivi de chantier et procès-verbaux de réunion",
   "author": "SELARL Rémi Thollet Architecte",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agence-rt/agoa-rv.git"
+  },
   "private": true,
   "main": "main.js",
   "agoa": {
