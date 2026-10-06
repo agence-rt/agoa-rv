@@ -29,6 +29,9 @@ const date = new Date().toISOString().slice(0, 10);
 const log = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "# Déploiements AGOA RV\n\n";
 fs.writeFileSync(logPath, log.replace(/(# Déploiements AGOA RV\n\n)/, `$1- **n°${n}** — v${version} — ${date} — ${note}\n`));
 
+// Notes affichées dans la fenêtre « Mise à jour disponible » (lues par electron-builder)
+fs.writeFileSync(path.join(root, "build", "release-notes.md"), `Déploiement n°${n} — ${note}\n`);
+
 const sh = c => execSync(c, { cwd: root, stdio: "inherit" });
 sh("git add -A");
 sh(`git commit -m "Déploiement n°${n} (v${version}) : ${note.replace(/"/g, "'")}"`);

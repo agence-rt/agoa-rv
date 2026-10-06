@@ -78,22 +78,53 @@ async function ragic(tool, input) {
   throw new Error("[tool_error] Outil inconnu : " + tool);
 }
 
-/* ---------- mises à jour ---------- */
+/* ---------- mises à jour (Releases GitHub agence-rt/agoa-rv) ---------- */
 let updater = null;
+let updateState = "idle"; // idle | checking | proposed | downloading | ready
+const notesText = info => {
+  const n = info && info.releaseNotes;
+  const t = Array.isArray(n) ? n.map(x => x.note || "").join("\n") : (n || "");
+  return String(t).replace(/<[^>]+>/g, "").trim();
+};
+async function proposeUpdate(info) {
+  if (updateState === "downloading" || updateState === "ready") return;
+  updateState = "proposed";
+  const notes = notesText(info);
+  const r = await dialog.showMessageBox(win, {
+    type: "info", buttons: ["Mettre à jour maintenant", "Plus tard"], defaultId: 0, cancelId: 1, noLink: true,
+    title: "Mise à jour disponible",
+    message: `AGOA RV ${info.version} est disponible.`,
+    detail: `Version installée : ${INFO.version} (déploiement n°${INFO.deploiement}).` + (notes ? `\n\nNouveautés :\n${notes}` : "") +
+      "\n\nLa mise à jour se télécharge puis l'application redémarre. Vos dossiers et fichiers .pv ne sont pas modifiés."
+  });
+  if (r.response !== 0) { updateState = "idle"; return; }
+  updateState = "downloading";
+  win.setTitle(`AGOA RV — téléchargement de la mise à jour ${info.version}…`);
+  updater.downloadUpdate().catch(err => {
+    updateState = "idle"; win.setProgressBar(-1); win.setTitle(`AGOA RV — v${INFO.version}`);
+    dialog.showErrorBox("Mise à jour", "Le téléchargement a échoué : " + (err && err.message ? err.message : err));
+  });
+}
 function setupUpdates() {
   if (!app.isPackaged) return;
   try {
     updater = require("electron-updater").autoUpdater;
-    updater.autoDownload = true;
-    updater.autoInstallOnAppQuit = true;
-    updater.on("update-downloaded", info => {
-      dialog.showMessageBox(win, {
-        type: "info", buttons: ["Redémarrer maintenant", "Plus tard"], defaultId: 0,
-        title: "Mise à jour AGOA RV", message: `La version ${info.version} est prête.`,
-        detail: "Elle s'installera au redémarrage de l'application. Vos dossiers ne sont pas modifiés."
-      }).then(r => { if (r.response === 0) updater.quitAndInstall(); });
+    updater.autoDownload = false;          // on demande d'abord à l'utilisateur
+    updater.autoInstallOnAppQuit = false;
+    updater.on("update-available", info => { proposeUpdate(info); });
+    updater.on("download-progress", p => {
+      win.setProgressBar(p.percent / 100);
+      win.setTitle(`AGOA RV — téléchargement de la mise à jour… ${Math.round(p.percent)} %`);
     });
-    updater.checkForUpdates().catch(() => {});
+    updater.on("update-downloaded", () => {
+      updateState = "ready"; win.setProgressBar(-1);
+      win.webContents.executeJavaScript("typeof Store !== 'undefined' && Store.flush && Store.flush()").catch(() => {}).finally(() => {
+        setTimeout(() => updater.quitAndInstall(true, true), 600); // installation silencieuse puis relance
+      });
+    });
+    updater.on("error", err => { console.warn("Mise à jour :", err && err.message); if (updateState === "checking") updateState = "idle"; });
+    // Recherche au lancement, une fois la fenêtre affichée
+    win.webContents.once("did-finish-load", () => setTimeout(() => { updateState = "checking"; updater.checkForUpdates().catch(() => { updateState = "idle"; }); }, 2500));
   } catch (e) { console.warn(e); }
 }
 
@@ -152,9 +183,14 @@ ipcMain.handle("save-pdf", async (e, filename) => {
 });
 ipcMain.handle("check-updates", async () => {
   if (!app.isPackaged || !updater) return "Disponible uniquement dans la version installée.";
-  const r = await updater.checkForUpdates();
-  const v = r && r.updateInfo && r.updateInfo.version;
-  return v && v !== INFO.version ? `Version ${v} en cours de téléchargement…` : `À jour (v${INFO.version}).`;
+  if (updateState === "downloading") return "Téléchargement en cours…";
+  try {
+    updateState = "checking";
+    const r = await updater.checkForUpdates();
+    const v = r && r.updateInfo && r.updateInfo.version;
+    if (r && r.isUpdateAvailable === false || !v || v === INFO.version) { updateState = "idle"; return `À jour (v${INFO.version}, déploiement n°${INFO.deploiement}).`; }
+    return `Version ${v} disponible.`;
+  } catch (err) { updateState = "idle"; return "GitHub injoignable : vérifiez la connexion Internet."; }
 });
 
 /* ---------- démarrage ---------- */

@@ -15,8 +15,11 @@ elle n'est jamais envoyée sur GitHub.
 
 ## Mises à jour
 
-L'application vérifie les Releases de ce dépôt à chaque démarrage, télécharge la nouvelle
-version en arrière-plan et propose de redémarrer. Aucune réinstallation.
+Au lancement, l'application interroge les Releases de ce dépôt. Si une version plus récente
+existe, elle affiche la version disponible et ses nouveautés, et propose « Mettre à jour
+maintenant » ou « Plus tard ». Si l'utilisateur accepte, la mise à jour se télécharge
+(progression dans la barre des tâches), s'installe et l'application redémarre. Aucune
+réinstallation. Vérification manuelle : **Agence › Rechercher une mise à jour**.
 
 ## Données
 
