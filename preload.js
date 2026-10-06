@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("agoa", {
   ragic: (tool, input) => ipcRenderer.invoke("ragic", tool, input),
   saveFile: (filename, bytes) => ipcRenderer.invoke("save-file", filename, bytes),
   savePDF: filename => ipcRenderer.invoke("save-pdf", filename),
+  saveAs: (filename, text) => ipcRenderer.invoke("save-as", filename, text),
+  writeFile: (file, text) => ipcRenderer.invoke("write-file", file, text),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
-  onOpenFile: cb => ipcRenderer.on("open-file", (e, name, text) => cb(name, text))
+  onOpenFile: cb => ipcRenderer.on("open-file", (e, name, text, file) => cb(name, text, file))
 });

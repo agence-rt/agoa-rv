@@ -55,10 +55,17 @@
     },
     "fileAssociations": [
       {
+        "ext": "pv",
+        "name": "Dossier PV",
+        "description": "Dossier de suivi de chantier AGOA (PV)",
+        "icon": "pv",
+        "role": "Editor"
+      },
+      {
         "ext": "agoarv",
-        "name": "AGOA RV",
-        "description": "Dossier de suivi de chantier AGOA RV",
-        "icon": "agoarv",
+        "name": "Dossier PV (ancien format)",
+        "description": "Dossier de suivi de chantier AGOA (ancien format)",
+        "icon": "pv",
         "role": "Editor"
       }
     ],

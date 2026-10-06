@@ -21,8 +21,10 @@ version en arrière-plan et propose de redémarrer. Aucune réinstallation.
 ## Données
 
 - Base de travail : `%APPDATA%\AGOA RV\agoa-rv-donnees.json` (copie de secours `.bak`).
-- Sauvegarde / échange d'un dossier : fichier **`.agoarv`** (JSON, photos et plans inclus).
-  Un double-clic sur un `.agoarv` l'ouvre dans AGOA RV.
+- Fichier du dossier : **`.pv`** (JSON, photos et plans inclus). À la création d'un dossier,
+  l'application propose de l'enregistrer sur le disque ; ce fichier est ensuite mis à jour
+  automatiquement à chaque modification. Un double-clic sur un `.pv` l'ouvre dans AGOA RV.
+  Les anciens fichiers `.agoarv` restent lisibles.
 
 ## Publier un déploiement
 

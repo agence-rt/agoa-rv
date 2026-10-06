@@ -8,7 +8,7 @@ const pkg = require("./package.json");
 const INFO = { version: pkg.version, deploiement: (pkg.agoa && pkg.agoa.deploiement) || 0 };
 
 let win = null;
-let pendingFile = null; // fichier .agoarv à ouvrir dès que l'interface est prête
+let pendingFile = null; // fichier .pv à ouvrir dès que l'interface est prête
 let ready = false;
 
 /* ---------- fichiers de données (dans %APPDATA%\AGOA RV) ---------- */
@@ -24,14 +24,14 @@ function writeAtomic(p, text) {
   fs.renameSync(tmp, p);
 }
 
-/* ---------- ouverture d'un .agoarv passé en argument (double-clic) ---------- */
-function agoarvFromArgs(argv) { return argv.find(a => /\.agoarv$/i.test(a) && fs.existsSync(a)) || null; }
+/* ---------- ouverture d'un .pv passé en argument (double-clic) ---------- */
+function agoarvFromArgs(argv) { return argv.find(a => /\.(pv|agoarv)$/i.test(a) && fs.existsSync(a)) || null; }
 function openAgoarv(file) {
   if (!file) return;
   let text;
   try { text = fs.readFileSync(file, "utf8"); } catch (e) { dialog.showErrorBox("AGOA RV", "Impossible de lire " + file); return; }
-  if (win && ready) win.webContents.send("open-file", path.basename(file), text);
-  else pendingFile = { name: path.basename(file), text };
+  if (win && ready) win.webContents.send("open-file", path.basename(file), text, file);
+  else pendingFile = { name: path.basename(file), text, file };
 }
 
 /* ---------- API Ragic (HTTP) ---------- */
@@ -107,7 +107,7 @@ function createWindow() {
   });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); return { action: "deny" }; });
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) { e.preventDefault(); if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); } });
-  win.webContents.on("did-finish-load", () => { ready = true; if (pendingFile) { win.webContents.send("open-file", pendingFile.name, pendingFile.text); pendingFile = null; } });
+  win.webContents.on("did-finish-load", () => { ready = true; if (pendingFile) { win.webContents.send("open-file", pendingFile.name, pendingFile.text, pendingFile.file); pendingFile = null; } });
   win.loadFile(path.join(__dirname, "app", "index.html"));
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: "Fichier", submenu: [{ role: "quit", label: "Quitter" }] },
@@ -125,10 +125,21 @@ ipcMain.on("set-config", (e, patch) => { writeAtomic(configPath(), JSON.stringif
 ipcMain.handle("ragic", (e, tool, input) => ragic(tool, input));
 ipcMain.handle("save-file", async (e, filename, bytes) => {
   const ext = (filename.split(".").pop() || "").toLowerCase();
-  const names = { agoarv: "Dossier AGOA RV", html: "Page HTML", pdf: "PDF" };
+  const names = { pv: "Dossier PV (AGOA)", html: "Page HTML", pdf: "PDF" };
   const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath("documents"), filename), filters: [{ name: names[ext] || ext.toUpperCase(), extensions: [ext] }, { name: "Tous les fichiers", extensions: ["*"] }] });
   if (r.canceled || !r.filePath) return false;
   fs.writeFileSync(r.filePath, Buffer.from(bytes));
+  return true;
+});
+ipcMain.handle("save-as", async (e, filename, text) => {
+  const r = await dialog.showSaveDialog(win, { title: "Enregistrer le dossier", defaultPath: path.join(app.getPath("documents"), filename), filters: [{ name: "Dossier PV (AGOA)", extensions: ["pv"] }] });
+  if (r.canceled || !r.filePath) return null;
+  writeAtomic(r.filePath, text);
+  return r.filePath;
+});
+ipcMain.handle("write-file", async (e, file, text) => {
+  if (!/\.pv$/i.test(file)) throw new Error("Seuls les fichiers .pv peuvent être écrits");
+  writeAtomic(file, text);
   return true;
 });
 ipcMain.handle("save-pdf", async (e, filename) => {
