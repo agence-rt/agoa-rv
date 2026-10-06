@@ -9,7 +9,12 @@ Application Windows de suivi de chantier et de rédaction des procès-verbaux de
 
 Télécharger `AGOA-PV-Setup-x.y.z.exe` dans la dernière
 [Release](https://github.com/agence-rt/agoa-rv/releases/latest) et le lancer.
-L'installation se fait pour l'utilisateur courant, sans droits administrateur.
+L'assistant (en français) demande :
+- pour qui installer : l'utilisateur courant (sans droits administrateur) ou tous les utilisateurs du poste ;
+- le **dossier d'installation** (modifiable, par défaut `%LOCALAPPDATA%\Programs\agoa-rv`).
+
+Les mises à jour suivantes s'installent dans le même dossier, sans repasser par l'assistant.
+Les données (`%APPDATA%\AGOA PV`) ne sont pas supprimées à la désinstallation.
 
 Au premier lancement : **Agence › Connexion Ragic**, renseigner la clé API Ragic
 (le serveur `https://eu2.ragic.com` est prérempli). La clé reste sur le poste (`%APPDATA%\AGOA PV\agoa-rv-config.json`),

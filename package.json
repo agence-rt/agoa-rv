@@ -47,11 +47,20 @@
       "icon": "build/icon.ico"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "AGOA PV"
+      "shortcutName": "AGOA PV",
+      "runAfterFinish": true,
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "language": "1036",
+      "multiLanguageInstaller": false,
+      "deleteAppDataOnUninstall": false
     },
     "fileAssociations": [
       {
