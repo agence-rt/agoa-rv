@@ -70,6 +70,11 @@ img{max-width:100%}
 .d-item .c{font-weight:700;font-stretch:88%;letter-spacing:.01em}
 .d-item .o{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .d-item .m{font-size:12px;color:var(--ink-3)}
+.rail-cur{padding:14px 16px;border-bottom:1px solid var(--rule-2)}
+.rail-cur:empty{display:none}
+.rail-cur .c{font-weight:700;font-stretch:88%}
+.rail-cur .o{font-size:13px;color:var(--ink-2)}
+.rail-cur .m{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rail-foot #appVer{font-size:11px;color:var(--ink-3)}
 .rail-foot{padding:10px 16px;border-top:1px solid var(--rule-2);display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:12px;color:var(--ink-3)}
 
@@ -348,14 +353,12 @@ fieldset.also label{display:flex;align-items:center;gap:6px;font-size:13px}
     <div class="rail-tools">
       <button class="btn primary" id="btnNew" style="justify-content:center">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Opération</button>
-      <input type="search" id="q" placeholder="Rechercher un dossier" aria-label="Rechercher un dossier">
-      <div class="seg" role="group" aria-label="Filtre">
-        <button data-f="actif" aria-pressed="true">En cours</button>
-        <button data-f="archive" aria-pressed="false">Archivés</button>
-      </div>
+      <label class="btn" style="justify-content:center" title="Ouvrir un fichier d'opération .pv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h6l2 2h10v10H3z"/></svg>Ouvrir opération<input type="file" accept=".pv,.agoarv,application/json" hidden id="openAgoarv"></label>
     </div>
-    <nav class="list" id="list" aria-label="Dossiers"></nav>
-    <div class="rail-foot"><div style="display:grid;gap:2px"><span id="storeInfo">Connexion…</span><span id="appVer"></span></div><div style="display:flex;gap:4px"><label class="btn ghost sm" title="Ouvrir un dossier .pv">Ouvrir<input type="file" accept=".pv,.agoarv,application/json" hidden id="openAgoarv"></label><button class="btn ghost sm" id="btnSettings" title="Paramètres de l'agence">Agence</button></div></div>
+    <div class="rail-cur" id="railCur"></div>
+    <div style="flex:1"></div>
+    <div class="rail-foot"><div style="display:grid;gap:2px"><span id="storeInfo">Connexion…</span><span id="appVer"></span></div><div style="display:flex;gap:4px"><button class="btn ghost sm" id="btnSettings" title="Paramètres de l'agence">Agence</button></div></div>
   </aside>
   <main class="main" id="main"></main>
 </div>
@@ -514,25 +517,20 @@ document.addEventListener("pointercancel", () => { S.ptr = false; }, true);
 
 /* ---------------- list ---------------- */
 function renderList() {
-  const q = S.q.trim().toLowerCase();
-  const rows = S.dossiers.filter(d => (d.statut || "actif") === S.filter)
-    .filter(d => !q || [d.code, d.objet, d.adresse, d.syndic].join(" ").toLowerCase().includes(q))
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  $("#list").innerHTML = rows.length ? rows.map(d => `
-    <button class="d-item" data-open="${esc(d.id)}" aria-current="${d.id === S.cur}">
-      <div class="c">${esc(d.code)}</div>
-      <div class="o">${esc(d.objet || d.adresse || "")}</div>
-      <div class="m">${d.lastPv ? `CR n°${d.lastPv.num} du ${fmt(d.lastPv.date)}` : "Aucune réunion"}${d.syndic ? " · " + esc(d.syndic) : ""}</div>
-    </button>`).join("") : `<p class="muted small" style="padding:12px 16px">${S.filter === "actif" ? "Aucun dossier en cours. Créez-en un à partir d'une opération Ragic." : "Aucun dossier archivé."}</p>`;
+  const d = D(); const el = $("#railCur"); if (!el) return;
+  el.innerHTML = d ? `<div class="small muted" style="margin-bottom:4px">Opération ouverte</div><div class="c">${esc(d.code)}</div><div class="o">${esc(d.objet || d.adresse || "")}</div>${NATIVE && d.fichier ? `<div class="m" title="${esc(d.fichier)}">${esc(d.fichier.split(/[\\/]/).pop())}</div>` : ""}<button class="btn ghost sm" data-close-op style="margin-top:6px;padding-left:0">Fermer l'opération</button>` : "";
+  el.querySelector("[data-close-op]")?.addEventListener("click", closeOperation);
+}
+async function closeOperation() {
+  if (NATIVE) { const d = D(); if (d && d.fichier) { try { clearTimeout(fileSaveT); Store.flush(); await writeFileNow(d); } catch (e) { toast("Enregistrement du fichier impossible : " + (e.message || "erreur"), 4500); } } }
+  S.unsub.forEach(u => { try { u(); } catch {} }); S.unsub = []; S.cur = null; renderList(); renderMain();
 }
 
 function bindShell() {
   $("#btnNew").onclick = openNewDossier;
   $("#btnSettings").onclick = openAgence;
-  $("#q").oninput = e => { S.q = e.target.value; renderList(); };
-  document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { S.filter = b.dataset.f; document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderList(); });
-  $("#list").onclick = e => { const b = e.target.closest("[data-open]"); if (b) openDossier(b.dataset.open); };
   const main = $("#main");
+  main.addEventListener("change", e => { if (e.target.matches("[data-open-pv]")) { const f = e.target.files[0]; e.target.value = ""; if (f) importAgoarv(f); } });
   main.addEventListener("click", onMainClick);
   main.addEventListener("change", onMainChange);
   main.addEventListener("keydown", e => { const t = e.target; if (t.dataset && t.dataset.todoAdd && e.key === "Enter") { e.preventDefault(); const v = t.value.trim(); if (!v) return; const p = S.points.find(x => x.id === t.dataset.todoAdd); t.value = ""; setTodo(p.id, [...(p.todo || []), { id: uid(), t: v, done: false }]).then(() => setTimeout(() => main.querySelector(`[data-todo-add="${p.id}"]`)?.focus(), 40)); } });
@@ -554,7 +552,7 @@ function openDossier(id) {
 function renderMain() {
   const main = $("#main"); const d = D();
   if (!d) {
-    main.innerHTML = `<div class="empty"><h2>Suivi de chantier</h2><p>Choisissez un dossier dans la liste ou créez-en un nouveau à partir d'une opération Ragic. Chaque réunion produit un compte rendu numéroté avec ses points par lot, ses photos annotées et son planning.</p><button class="btn primary" data-act="new-dossier">${ICON.plus}Opération</button></div>`;
+    main.innerHTML = `<div class="empty"><img src="${ICON_APP}" alt="" style="width:64px;height:64px;margin-bottom:12px"><h2>AGOA PV</h2><p>Créez une opération à partir de Ragic, ou ouvrez le fichier .pv d'une opération existante.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="new-dossier">${ICON.plus}Opération</button><label class="btn">Ouvrir opération<input type="file" accept=".pv,.agoarv,application/json" hidden data-open-pv></label></div></div>`;
     return;
   }
   const scroll = main.scrollTop;
@@ -1564,7 +1562,7 @@ async function createDossier(b) {
   (b.intervenants || []).forEach(i => { if (names.includes(i.nom)) i.nom = prof({ agence: ag }).nom; });
   const doc = { ...b.dossier, agence: ag, statut: "actif", intervenants: b.intervenants, planning: b.planning, planningInPv: true, reunionTexte: "", diffusion: DIFFUSION, lastPv: null, createdAt: Date.now(), updatedAt: Date.now() };
   $("#layer").innerHTML = "";
-  try { await Store.set("dossiers/" + id, doc); S.filter = "actif"; document.querySelectorAll(".seg button[data-f]").forEach(x => x.setAttribute("aria-pressed", x.dataset.f === "actif")); S.dossiers = S.dossiers.filter(d => d.id !== id).concat([{ id, ...doc }]); openDossier(id); S.tab = "intervenants"; renderMain();
+  try { await Store.set("dossiers/" + id, doc); S.dossiers = S.dossiers.filter(d => d.id !== id).concat([{ id, ...doc }]); openDossier(id); S.tab = "intervenants"; renderMain();
     if (NATIVE || await askConfirm("Enregistrer le dossier sur le disque ?", `Le dossier ${doc.code} sera enregistré dans un fichier ${pvFilename(doc)}, que vous pourrez rouvrir ou transmettre.`, "Enregistrer le fichier .pv")) await exportAgoarv();
     toast("Dossier créé — vérifiez les intervenants et leurs numéros de lot"); }
   catch (e) { toast("Création impossible : " + (e.code || "erreur")); }
