@@ -43,7 +43,12 @@ function openAgoarv(file) {
 function ragicCfg() {
   const c = readJson(configPath(), {});
   if (!c.ragicKey) throw new Error("[no_key] Clé API Ragic manquante");
-  return { host: (c.ragicHost || "https://eu2.ragic.com").replace(/\/+$/, ""), key: c.ragicKey };
+  // Seule l'origine compte (https://eu2.ragic.com) : une adresse collée depuis le navigateur
+  // (https://eu2.ragic.com/agoa/...) ajouterait un chemin en trop et Ragic renverrait la liste des feuilles.
+  let host = String(c.ragicHost || "").trim() || "https://eu2.ragic.com";
+  if (!/^https?:\/\//i.test(host)) host = "https://" + host;
+  try { host = new URL(host).origin; } catch { host = "https://eu2.ragic.com"; }
+  return { host, key: String(c.ragicKey).trim() };
 }
 // Clé passée dans l'adresse (?APIKey=…), méthode documentée par Ragic pour une clé API seule :
 // l'en-tête « Authorization: Basic » attend base64(e-mail:clé) et, mal formé, Ragic répond sans aucune fiche.
@@ -64,6 +69,8 @@ async function ragicGet(url, key) {
   }
   // Réponse sans fiche mais avec d'autres informations (message, code) : on la montre plutôt que « 0 résultat ».
   const keys = j && typeof j === "object" ? Object.keys(j) : [];
+  if (keys.length && !keys.some(k => /^\d+$/.test(k)) && keys.some(k => j[k] && typeof j[k] === "object" && "children" in j[k]))
+    throw new Error("[tool_error] Ragic n'a pas trouvé la feuille " + url.split("?")[0].replace(/^https?:\/\/[^/]+/, "") + " (il a renvoyé la liste des feuilles du compte).");
   if (keys.length && !keys.some(k => /^\d+$/.test(k))) throw new Error("[tool_error] Réponse Ragic inattendue : " + txt.slice(0, 200));
   return j;
 }
