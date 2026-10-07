@@ -1,6 +1,9 @@
 "use strict";
 // AGOA PV — processus principal Electron
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu, safeStorage } = require("electron");
+const MAC = process.platform === "darwin";
+// Releases GitHub (page de téléchargement, utilisée sur Mac où l'installation automatique demande une signature Apple)
+const RELEASES_URL = "https://github.com/agence-rt/agoa-rv/releases/latest";
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -198,6 +201,18 @@ async function proposeUpdate(info) {
   win.setTitle(`AGOA PV — téléchargement de la mise à jour ${info.version}…`);
   startDownload();
 }
+// Mac : l'application n'est pas signée par un compte développeur Apple, la mise à jour ne peut donc pas
+// s'installer seule. On propose de télécharger la nouvelle version (page des Releases).
+let macUpdate = null;
+async function proposeMacUpdate() {
+  if (!macUpdate || !win) return;
+  const info = macUpdate; macUpdate = null;
+  const notes = notesText(info);
+  const r = await dialog.showMessageBox(win, { type: "info", buttons: ["Télécharger", "Plus tard"], defaultId: 0, cancelId: 1, noLink: true,
+    title: "Mise à jour disponible", message: `AGOA PV ${info.version} est disponible.`,
+    detail: `Version installée : ${INFO.version}.` + (notes ? `\n\nNouveautés :\n${notes}` : "") + "\n\nTéléchargez le fichier AGOA-PV-…-mac.dmg, ouvrez-le et glissez AGOA PV dans Applications (remplacer). Vos dossiers ne sont pas modifiés." });
+  if (r.response === 0) shell.openExternal(RELEASES_URL);
+}
 function initUpdater() {
   if (!app.isPackaged) return;
   try {
@@ -206,6 +221,7 @@ function initUpdater() {
     updater.autoInstallOnAppQuit = false;
     updater.on("update-available", info => {
       pendingVersion = info.version;
+      if (MAC) { macUpdate = info; updateState = "idle"; if (phase === "splash") { splashStatus(`Nouvelle version ${info.version} disponible`); setTimeout(() => startupDone && startupDone("none"), 900); } else proposeMacUpdate(); return; }
       if (phase === "splash") { splashStatus(`Mise à jour ${info.version} disponible — téléchargement…`, 0); startDownload(); }
       else proposeUpdate(info);
     });
@@ -255,7 +271,7 @@ function readAuth() {
   } catch { return null; }
 }
 function writeAuth(obj) {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error("Chiffrement Windows indisponible");
+  if (!safeStorage.isEncryptionAvailable()) throw new Error(MAC ? "Trousseau macOS indisponible" : "Chiffrement Windows indisponible");
   const enc = safeStorage.encryptString(JSON.stringify(obj)).toString("base64"); // lié à la session Windows (DPAPI)
   writeAtomic(configPath(), JSON.stringify({ ...readJson(configPath(), {}), auth: enc }, null, 2));
 }
@@ -352,7 +368,10 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, "app", "index.html"));
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: "Fichier", submenu: [{ role: "quit", label: "Quitter" }] },
+    // macOS : menu de l'application et menu Édition (sans lui, Cmd+C / Cmd+V ne fonctionnent pas)
+    ...(MAC ? [{ label: "AGOA PV", submenu: [{ role: "about", label: "À propos d'AGOA PV" }, { type: "separator" }, { role: "hide", label: "Masquer AGOA PV" }, { role: "hideOthers", label: "Masquer les autres" }, { role: "unhide", label: "Tout afficher" }, { type: "separator" }, { role: "quit", label: "Quitter AGOA PV" }] },
+      { label: "Édition", submenu: [{ role: "undo", label: "Annuler" }, { role: "redo", label: "Rétablir" }, { type: "separator" }, { role: "cut", label: "Couper" }, { role: "copy", label: "Copier" }, { role: "paste", label: "Coller" }, { role: "selectAll", label: "Tout sélectionner" }] }] : []),
+    { label: "Fichier", submenu: [MAC ? { role: "close", label: "Fermer la fenêtre" } : { role: "quit", label: "Quitter" }] },
     { label: "Affichage", submenu: [{ role: "reload", label: "Recharger" }, { role: "zoomIn", label: "Zoom +" }, { role: "zoomOut", label: "Zoom −" }, { role: "resetZoom", label: "Zoom 100 %" }, { type: "separator" }, { role: "toggleDevTools", label: "Outils de développement" }] },
     { label: "Aide", submenu: [{ label: `AGOA PV v${INFO.version} — déploiement n°${INFO.deploiement}`, enabled: false }].concat(authEnabled() && readAuth() ? [{ label: `Compte : ${readAuth().email}`, enabled: false }] : []) }
   ]));
@@ -464,6 +483,7 @@ else {
     splashStatus("Démarrage…");
     createWindow(); booting = false;
     openAgoarv(agoarvFromArgs(process.argv));
+    if (MAC && macUpdate) win.once("show", () => setTimeout(proposeMacUpdate, 800));
   });
   app.on("window-all-closed", () => { if (!booting) app.quit(); });
 }
