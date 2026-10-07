@@ -1,1 +1,1 @@
-Déploiement n°18 — Connexion Ragic sous Windows : clé API transmise selon la méthode documentée par Ragic ; message explicite si Ragic refuse la clé
+Déploiement n°19 — Numéro de PV modifiable ; code d'accès de l'immeuble relié à Ragic ; mise en forme du texte (gras, souligné, surligné, taille, puces, justification) ; photos d'avancement dans les commentaires généraux ; ordre des photos modifiable ; adresse du serveur Ragic corrigée automatiquement
