@@ -68,7 +68,7 @@
         "fr_FR"
       ],
       "language": "1036",
-      "multiLanguageInstaller": false,
+      "multiLanguageInstaller": true,
       "deleteAppDataOnUninstall": false
     },
     "fileAssociations": [
