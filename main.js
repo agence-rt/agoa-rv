@@ -120,6 +120,20 @@ async function ragic(tool, input) {
     const j = await ragicGet(`${base}?api&v=3&limit=${input.count || 50}${whereParams(input.filters)}`, key);
     return { records: toList(j).map(x => ({ record_id: x.id, record: x.rec })) };
   }
+  if (tool === "update_record") {
+    // Écriture d'un ou plusieurs champs d'une fiche existante (ex. code porte d'une opération)
+    if (!input.record_id) throw new Error("[tool_error] Fiche Ragic inconnue");
+    const body = new URLSearchParams();
+    Object.entries(input.fields || {}).forEach(([fid, v]) => body.append(String(fid), v == null ? "" : String(v)));
+    let r;
+    try { r = await fetch(`${base}/${input.record_id}?api&v=3&APIKey=${encodeURIComponent(key)}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() }); }
+    catch (e) { throw new Error("[network] " + e.message); }
+    if (r.status === 401 || r.status === 403) throw new Error("[auth] Ragic refuse la modification avec cette clé");
+    if (!r.ok) throw new Error("[tool_error] Ragic HTTP " + r.status);
+    let j = {}; try { j = JSON.parse(await r.text()); } catch {}
+    if (j.status && j.status !== "SUCCESS") throw new Error("[tool_error] " + (j.msg || "Modification refusée par Ragic"));
+    return { ok: true };
+  }
   throw new Error("[tool_error] Outil inconnu : " + tool);
 }
 
