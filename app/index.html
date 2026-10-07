@@ -205,6 +205,10 @@ table.t td.c,table.t th.c{text-align:center;width:90px}
 .ph img{display:block;width:100%;height:auto}
 .ph svg.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .ph .cap{display:block;font-size:12px;padding:4px 6px;line-height:1.3;color:var(--ink-2);text-align:left;background:var(--paper)}
+.pt-plan{display:grid;gap:4px;justify-items:start;border:0;background:transparent;padding:0;cursor:zoom-in;text-align:left;max-width:340px}
+.pt-plan .plan-wrap{border:1px solid var(--rule)}
+.pt-plan .plan-wrap img{max-height:220px}
+.doc figure.ppl{margin:6px 0 4px;width:60%;break-inside:avoid}
 .ph-wrap{display:flex;flex-direction:column;gap:2px;width:160px}
 .ph-ord{display:flex;align-items:center;justify-content:space-between}
 .ph-ord .btn{padding:2px 8px}
@@ -408,7 +412,10 @@ const fmtLong = (iso) => { if (!iso) return ""; try { return new Date(iso + "T12
 const ragicDate = (s) => { if (!s || typeof s !== "string") return ""; const m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})/); return m && m[1] > "1900" ? `${m[1]}-${m[2]}-${m[3]}` : ""; };
 const pvId = (n) => "pv" + String(n).padStart(3, "0");
 const safeId = (s) => String(s || "dossier").trim().replace(/[^A-Za-z0-9_\-.~:@+]/g, "_").slice(0, 120) || "dossier";
-function lotColor(lot) { const n = parseInt(lot, 10); if (!isNaN(n)) return LOT_COLORS[((n - 1) % LOT_COLORS.length + LOT_COLORS.length) % LOT_COLORS.length]; let h = 0; for (const c of String(lot)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return LOT_COLORS[h % LOT_COLORS.length]; }
+// Commentaires généraux : traités comme les points d'un intervenant (numéros 0.01, 0.02…), ils reviennent
+// à chaque réunion tant qu'ils ne sont pas validés.
+const GEN = { id: "gen", lot: "0", nom: "Commentaires généraux", role: "" };
+function lotColor(lot) { if (String(lot) === "0") return "#5A6670"; const n = parseInt(lot, 10); if (!isNaN(n)) return LOT_COLORS[((n - 1) % LOT_COLORS.length + LOT_COLORS.length) % LOT_COLORS.length]; let h = 0; for (const c of String(lot)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return LOT_COLORS[h % LOT_COLORS.length]; }
 function isoWeek(iso) { const d = new Date(iso + "T12:00:00"); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y0) / 864e5 + 1) / 7); }
 function mondayOf(iso) { const d = new Date(iso + "T12:00:00"); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return d.toISOString().slice(0, 10); }
 function toast(msg, ms = 2600) { const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
@@ -569,14 +576,20 @@ function openDossier(id) {
 }
 
 /* ---------------- main ---------------- */
+function keepDraft() {
+  const f = document.querySelector("#main .pform"); if (!f || !S.edit) return;
+  const v = k => f.querySelector(`[data-pf="${k}"]`);
+  S.edit.draft = { form: f.dataset.form, intId: f.querySelector('[data-pf="intId"]')?.value, titre: v("titre")?.value || "", echeance: v("echeance")?.value || "", texte: v("texte")?.value || "", memo: !!v("memo")?.checked, urgent: !!v("urgent")?.checked, also: [...f.querySelectorAll("[data-also]")].filter(x => x.checked).map(x => x.dataset.also) };
+}
 function renderMain() {
+  keepDraft();
   const main = $("#main"); const d = D();
   if (!d) {
     main.innerHTML = `<div class="empty"><img src="${ICON_APP}" alt="" style="width:64px;height:64px;margin-bottom:12px"><h2>AGOA PV</h2><p>Créez une opération à partir de Ragic, ou ouvrez le fichier .pv d'une opération existante.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="new-dossier">${ICON.plus}Opération</button><label class="btn">Ouvrir opération<input type="file" accept=".pv,.agoarv,application/json" hidden data-open-pv></label></div></div>`;
     return;
   }
   const scroll = main.scrollTop;
-  const tabs = [["crs", "PV"], ["reunion", "Réunion"], ["intervenants", "Intervenants"], ["planning", "Planning"], ["plans", "Plans & documents"], ["dossier", "Options"]];
+  const tabs = [["crs", "PV"], ["reunion", "Rédaction"], ["intervenants", "Intervenants"], ["planning", "Planning"], ["plans", "Documents"], ["dossier", "Options"]];
   main.innerHTML = `
   <header class="d-head">
     <div class="row">
@@ -609,7 +622,7 @@ function viewReunion(d) {
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span class="pv-title">Réunion n°${n}<small>${esc(fmtLong(pv.date))}</small></span>
       <span class="state ${ro ? "sent" : "draft"}">${ro ? "Diffusé" : "Brouillon"}</span>
-      ${pvs.length > 1 ? `<select data-act="pv-sel" aria-label="Choisir un compte rendu" style="width:auto">${pvs.map(p => `<option value="${p.id}" ${p.id === pv.id ? "selected" : ""}>CR n°${p.num} — ${fmt(p.date)}</option>`).join("")}</select>` : ""}
+      ${pvs.length > 1 ? `<select data-act="pv-sel" aria-label="Choisir un PV" style="width:auto">${pvs.map(p => `<option value="${p.id}" ${p.id === pv.id ? "selected" : ""}>PV n°${p.num} — ${fmt(p.date)}</option>`).join("")}</select>` : ""}
     </div>
     ${ro ? `<span class="small muted">PV diffusé, en lecture seule — rouvrez-le depuis l'onglet PV pour le modifier.</span>` : ""}
   </div>
@@ -644,11 +657,7 @@ function viewReunion(d) {
     </div>
   </section>
 
-  <section class="sec">
-    <div class="sec-h"><h3>Commentaires généraux</h3></div>
-    <div class="sec-b">${ro ? (pv.commentaires ? `<div class="rich">${richHtml(pv.commentaires)}</div>` : `<span class="muted">—</span>`) : rte('data-pv-field="commentaires"', pv.commentaires, "Avancement général, faits marquants, décisions…")}
-      ${(() => { const gp = photosOf("gen", pv.num); return gp.length || !ro ? `<div style="margin-top:12px"><div class="small muted" style="margin-bottom:6px">Photos d'avancement du chantier</div>${photoStrip("gen", gp, ro, "Photo d'avancement du chantier")}</div>` : ""; })()}</div>
-  </section>
+  ${genSection(pv, ro)}
 
   <section class="sec">
     <div class="sec-h"><h3>Planning</h3><button class="btn sm" data-tab="planning">Modifier le planning</button></div>
@@ -660,7 +669,22 @@ function viewReunion(d) {
       <span class="hint">${counts.new} nouveau${counts.new > 1 ? "x" : ""} · ${counts.open} en cours · ${counts.rappel} rappel${counts.rappel > 1 ? "s" : ""} · ${counts.urgent} urgent${counts.urgent > 1 ? "s" : ""} · ${counts.realise} réalisé${counts.realise > 1 ? "s" : ""} cette semaine · ${counts.past} traité${counts.past > 1 ? "s" : ""} auparavant</span></div>
     ${lotBlocks(d, pv, ro)}
   </section>
-  ${plansSection(pv)}`;
+`;
+}
+function genSection(pv, ro) {
+  const n = pv.num;
+  const all = S.points.filter(p => p.intId === "gen" && ptState(p, n)).sort((a, b) => a.seq - b.seq);
+  const pts = all.filter(p => !["past", "realise"].includes(ptState(p, n))), past = [...all.filter(p => ptState(p, n) === "past"), ...all.filter(p => ptState(p, n) === "realise")];
+  const gp = photosOf("gen", pv.num);
+  return `<section class="sec">
+    <div class="sec-h"><h3>Commentaires généraux</h3>${ro ? "" : `<button class="btn sm" data-act="pt-new" data-int="gen">${ICON.plus}Commentaire</button>`}</div>
+    <div class="lot-points" style="padding-top:8px">
+      ${pts.length ? pts.map(p => pointCard(p, pv, ro)).join("") : (S.edit && S.edit.mode === "new" && S.edit.intId === "gen" ? "" : `<div class="lot-none">${past.length ? "Aucun commentaire en cours" : "Aucun commentaire. Chaque commentaire revient à chaque réunion tant qu'il n'est pas validé."}</div>`)}
+      ${past.length ? `<div class="past-h">Commentaires traités (${past.length})</div>${past.map(p => pointCard(p, pv, ro)).join("")}` : ""}
+      ${S.edit && S.edit.mode === "new" && S.edit.intId === "gen" ? pointForm(null, GEN) : ""}
+      ${pv.commentaires ? `<div style="margin-top:12px"><div class="small muted" style="margin-bottom:4px">Note de cette réunion</div>${ro ? `<div class="rich">${richHtml(pv.commentaires)}</div>` : rte('data-pv-field="commentaires"', pv.commentaires, "")}</div>` : ""}
+      ${gp.length ? `<div style="margin-top:12px"><div class="small muted" style="margin-bottom:6px">Photos d'avancement du chantier</div>${photoStrip("gen", gp, ro, "Photo d'avancement du chantier")}</div>` : ""}
+    </div></section>`;
 }
 function plansSection(pv) {
   const n = pv.num; const pl = plans();
@@ -671,7 +695,7 @@ function plansSection(pv) {
 
 function lotBlocks(d, pv, ro) {
   const n = pv.num; const list = ints(d);
-  const known = new Set(list.map(i => i.id));
+  const known = new Set(list.map(i => i.id).concat("gen"));
   const orphans = S.points.filter(p => !known.has(p.intId) && ptState(p, n));
   const blocks = list.map(i => {
     const all = S.points.filter(p => p.intId === i.id && ptState(p, n)).sort((a, b) => (a.seq - b.seq));
@@ -755,19 +779,20 @@ function pointCard(p, pv, ro) {
   const also = (p.also || []).map(id => byId[id]).filter(Boolean);
   const plan = p.pin && S.docs.find(x => x.id === p.pin.planId);
   const todo = p.todo || [];
-  const hist = [`Créé au CR n°${p.pv}`].concat(Object.keys(p.events || {}).map(Number).filter(k => k < n).sort((a, b) => a - b).map(k => `${({ rappel: "rappel", urgent: "rappel urgent", realise: "réalisé" })[p.events[k]] || p.events[k]} au CR n°${k}`)).join(" · ");
+  const hist = [`Créé au PV n°${p.pv}`].concat(Object.keys(p.events || {}).map(Number).filter(k => k < n).sort((a, b) => a - b).map(k => `${({ rappel: "rappel", urgent: "rappel urgent", realise: "réalisé" })[p.events[k]] || p.events[k]} au PV n°${k}`)).join(" · ");
   return `<div class="pt s-${st === "new" ? (p.memo ? "memo" : "new") : (p.memo && st === "open" ? "memo" : st)}" id="pt-${p.id}">
     <div class="pt-h"><span class="pnum" style="background:${col}">${esc(p.num)}</span><span class="ttl">${esc(p.titre)}</span>${tag}${due}
       ${plan ? `<button class="chip" data-act="pin-view" data-id="${p.id}" title="Voir sur le plan">${ICON.pin}${esc(plan.nom)}</button>` : ""}
-      ${ro ? "" : `${plans().length ? `<button class="btn ghost sm" data-act="pt-pin" data-id="${p.id}">${plan ? "Déplacer" : "Localiser"}</button>` : ""}<button class="btn ghost sm" data-act="pt-edit" data-id="${p.id}">Modifier</button>`}</div>
+      ${ro ? "" : `<button class="btn ghost sm" data-act="pt-edit" data-id="${p.id}">Modifier</button>`}</div>
     <div class="pt-b">
       ${also.length ? `<div class="small">Concerne aussi : ${also.map(i => `<span class="lot" style="background:${lotColor(i.lot)};height:20px;min-width:20px;font-size:11px">${esc(i.lot)}</span> ${esc(i.nom)}`).join(" · ")}</div>` : ""}
       ${p.texte ? `<div class="pt-txt rich">${richHtml(p.texte)}</div>` : ""}
       ${todo.length ? `<div class="todo">${todo.map(t => `<label class="todo-i ${t.done ? "done" : ""}"><input type="checkbox" class="chk" data-todo="${p.id}:${t.id}" ${t.done ? "checked" : ""} ${ro ? "disabled" : ""}><span>${esc(t.t)}</span>${ro ? "" : `<button class="x" data-act="todo-del" data-id="${p.id}" data-t="${t.id}" aria-label="Retirer la tâche">×</button>`}</label>`).join("")}
         </div>` : ""}
-      ${notes.map(k => `<div class="note-pv small"><span class="muted">CR n°${k} :</span> <span class="rich">${richHtml(p.notes[k])}</span></div>`).join("")}
+      ${notes.map(k => `<div class="note-pv small"><span class="muted">PV n°${k} :</span> <span class="rich">${richHtml(p.notes[k])}</span></div>`).join("")}
       ${older ? (ro ? ((p.notes || {})[n] ? `<div class="note-pv"><span class="muted small">Cette réunion :</span> <span class="rich">${richHtml(p.notes[n])}</span></div>` : "") : rte(`data-note="${p.id}"`, (p.notes || {})[n] || "", "Observation de cette réunion (facultatif)")) : ""}
       ${(phs.length || !ro) ? photoStrip(p.id, phs, ro, "Photo du point " + p.num) : ""}
+      ${plan ? `<button class="pt-plan" data-act="pin-view" data-id="${p.id}" title="Agrandir le plan"><span class="plan-wrap"><img src="${esc(docSrc(plan))}" alt="Plan ${esc(plan.nom)}" loading="lazy">${pinsSVG(plan, [p], n, { hi: p.id })}</span><span class="small muted">Localisation : ${esc(plan.nom)}</span></button>` : ""}
       <div class="hist">${esc(hist)}${prev ? ` · dernier statut : ${prev === "urgent" ? "rappel urgent" : "rappel"}` : ""}</div>
     </div>
     ${older && !ro ? `<div class="decide"><span class="lbl">Suite donnée :</span>
@@ -777,22 +802,35 @@ function pointCard(p, pv, ro) {
   </div>`;
 }
 
+function pinInfo(pin) { const pl = pin && S.docs.find(x => x.id === pin.planId); return pl ? `Localisé sur « ${esc(pl.nom)} »` : "Non localisé"; }
+// Photos choisies dans la fenêtre de saisie d'un nouveau point : gardées en attente, envoyées à la création.
+function newPhotosHtml() {
+  const files = (S.edit && S.edit.files) || [];
+  return `<div class="photos" data-pf-photos>${files.map((f, i) => `<div class="ph-wrap"><span class="ph" style="cursor:default"><span class="fig"><img src="${f.url}" alt="Photo ${i + 1}"></span></span><div class="ph-ord"><button class="btn ghost sm" type="button" data-act="pf-ph-move" data-i="${i}" data-dir="-1" ${i ? "" : "disabled"} aria-label="Avant">◀</button><button class="btn ghost sm danger" type="button" data-act="pf-ph-del" data-i="${i}" aria-label="Retirer">×</button><button class="btn ghost sm" type="button" data-act="pf-ph-move" data-i="${i}" data-dir="1" ${i < files.length - 1 ? "" : "disabled"} aria-label="Après">▶</button></div></div>`).join("")}
+    <label class="ph-add">${ICON.cam}Ajouter des photos<input type="file" accept="image/*" multiple hidden data-pf-newphotos></label></div>`;
+}
+function refreshNewPhotos() { const el = document.querySelector("[data-pf-photos]"); if (el) el.outerHTML = newPhotosHtml(); }
 function pointForm(p, int) {
   const d = D(); const isNew = !p;
   const iid = p ? p.intId : int.id;
   const pvN = curPv().num;
-  const also = new Set(p?.also || []);
+  // Saisie en cours conservée si l'écran se redessine (import d'un plan, synchronisation…)
+  const dr = S.edit && S.edit.draft && S.edit.draft.form === (isNew ? "new" : p.id) && (!isNew || S.edit.draft.intId === iid) ? S.edit.draft : null;
+  const val = k => dr ? dr[k] : (p ? p[k] : "");
+  const also = new Set(dr ? dr.also : (p?.also || []));
   return `<div class="pform" data-form="${isNew ? "new" : p.id}">
     <div class="grid2">
-      <label class="f">Intervenant${isNew ? "" : " (le numéro du point est conservé)"}<select data-pf="intId" ${isNew ? "" : "disabled"}>${ints(d).map(i => `<option value="${i.id}" ${i.id === iid ? "selected" : ""}>Lot ${esc(i.lot)} — ${esc(i.nom)}</option>`).join("")}</select></label>
-      <label class="f">Échéance<input type="date" data-pf="echeance" value="${esc(p?.echeance || "")}"></label>
+      ${iid === "gen" ? `<label class="f">Rubrique<select data-pf="intId" disabled><option value="gen" selected>Commentaires généraux</option></select></label>` : `<label class="f">Intervenant${isNew ? "" : " (le numéro du point est conservé)"}<select data-pf="intId" ${isNew ? "" : "disabled"}>${ints(d).map(i => `<option value="${i.id}" ${i.id === iid ? "selected" : ""}>Lot ${esc(i.lot)} — ${esc(i.nom)}</option>`).join("")}</select></label>`}
+      <label class="f">Échéance<input type="date" data-pf="echeance" value="${esc(val("echeance") || "")}"></label>
     </div>
-    <label class="f">Titre<input type="text" data-pf="titre" value="${esc(p?.titre || "")}" placeholder="Ex. Reprise des éclats sur le bardage" required></label>
-    <div class="f" style="display:grid;gap:4px;font-size:13px;color:var(--ink-2)">Description${rte('data-pf="texte"', p?.texte || "", "Constat, demande, référence au devis…")}</div>
+    <label class="f">Titre<input type="text" data-pf="titre" value="${esc(val("titre") || "")}" placeholder="Ex. Reprise des éclats sur le bardage" required></label>
+    <div class="f" style="display:grid;gap:4px;font-size:13px;color:var(--ink-2)">Description${rte('data-pf="texte"', val("texte") || "", "Constat, demande, référence au devis…")}</div>
     <fieldset class="also"><legend>Concerne aussi</legend>${ints(d).filter(i => i.id !== iid).map(i => `<label><input type="checkbox" class="chk" data-also="${i.id}" ${also.has(i.id) ? "checked" : ""}> <span class="lot" style="background:${lotColor(i.lot)};height:20px;min-width:20px;font-size:11px">${esc(i.lot)}</span> ${esc(i.nom)}</label>`).join("") || '<span class="muted small">Aucun autre intervenant</span>'}</fieldset>
+    <div style="display:grid;gap:6px"><div class="small muted">Photos</div>${isNew ? newPhotosHtml() : photoStrip(p.id, photosOf(p.id), false, "Photo du point " + p.num)}</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn sm" data-act="pf-pin" type="button">${ICON.pin}Localiser sur un plan</button><span class="small muted" data-pf-pininfo>${pinInfo(isNew ? (S.edit && S.edit.pin) : p.pin)}</span></div>
     <div style="display:flex;gap:18px;flex-wrap:wrap">
-      <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" class="chk" data-pf="memo" ${p?.memo ? "checked" : ""}> Pour mémoire (information, sans action demandée)</label>
-      ${isNew || p.pv === pvN ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" class="chk" data-pf="urgent" ${p && (p.events || {})[pvN] === "urgent" ? "checked" : ""}> Point urgent dès cette réunion</label>` : ""}
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" class="chk" data-pf="memo" ${(dr ? dr.memo : p?.memo) ? "checked" : ""}> Pour mémoire (information, sans action demandée)</label>
+      ${isNew || p.pv === pvN ? `<label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" class="chk" data-pf="urgent" ${(dr ? dr.urgent : p && (p.events || {})[pvN] === "urgent") ? "checked" : ""}> Point urgent dès cette réunion</label>` : ""}
     </div>
     <div class="row">
       ${isNew ? "" : `<button class="btn danger" data-act="pt-del" data-id="${p.id}">Supprimer le point</button><span style="flex:1"></span>`}
@@ -814,7 +852,7 @@ function viewPlans(d) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${pl.map(x => `<button class="btn sm ${x.id === sel.id ? "primary" : ""}" data-act="plan-sel" data-id="${x.id}">${esc(x.nom)}</button>`).join("")}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:200px">Nom du plan<input type="text" data-docname="${sel.id}" value="${esc(sel.nom)}"></label><button class="btn danger" data-act="doc-del" data-id="${sel.id}">Supprimer ce plan</button></div>
       <div class="plan-stage"><div class="plan-wrap"><img src="${esc(docSrc(sel))}" alt="${esc(sel.nom)}">${pinsSVG(sel, pts, n, { clickable: true })}</div></div>
-      <p class="small muted" style="margin:0">${pts.length ? `${pts.length} point(s) localisé(s) sur ce plan${pv ? ` au CR n°${n}` : ""}. Cliquez sur une pastille pour ouvrir le point.` : "Aucun point localisé sur ce plan. Utilisez « Localiser » sur un point de la réunion."}</p>
+      <p class="small muted" style="margin:0">${pts.length ? `${pts.length} point(s) localisé(s) sur ce plan${pv ? ` au PV n°${n}` : ""}. Cliquez sur une pastille pour ouvrir le point.` : "Aucun point localisé sur ce plan. Utilisez « Localiser » sur un point de la réunion."}</p>
     </div>` : `<div class="sec-b muted">Importez vos plans (image ou PDF, première page) pour y placer les points avec des pastilles numérotées. Les plans localisés apparaissent dans le compte rendu.</div>`}
   </section>
   <section class="sec">
@@ -838,6 +876,7 @@ async function pdfFirstPage(file, max) {
   const c = document.createElement("canvas"); c.width = Math.round(v.width); c.height = Math.round(v.height); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
   await page.render({ canvasContext: x, viewport: v }).promise; return c;
 }
+const waitFor = (cond, ms = 4000) => new Promise(res => { const t0 = Date.now(); const tick = () => cond() || Date.now() - t0 > ms ? res() : setTimeout(tick, 60); tick(); });
 async function uploadPlan(file) {
   toast("Import du plan…", 1800);
   try {
@@ -849,7 +888,7 @@ async function uploadPlan(file) {
     let doc = { kind: "plan", nom, w: canvas.width, h: canvas.height, mime: "image/jpeg", createdAt: Date.now() };
     if (big) { const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", .85)); doc.assetId = (await CAP.assets.upload(blob, { type: "image/jpeg" })).id; }
     else { let q = .6, url; do { url = canvas.toDataURL("image/jpeg", q); q -= .1; } while (url.length > LIM && q > .15); doc.dataUrl = url; }
-    const id = uid(); await Store.set(dPath() + "/docs/" + id, doc); S.planSel = id; toast("Plan ajouté");
+    const id = uid(); await Store.set(dPath() + "/docs/" + id, doc); S.planSel = id; toast("Plan ajouté"); return id;
   } catch (e) { console.warn(e); toast(/pdf/i.test(e.message || "") ? "Lecture du PDF impossible : exportez la page en image (PNG/JPG)." : "Import impossible : " + (e.code || e.message || "erreur"), 4500); }
 }
 async function uploadDoc(file) {
@@ -871,30 +910,42 @@ async function downloadDoc(x) {
   } catch (e) { if (e && e.code !== "cancelled" && e.code !== "declined") toast("Téléchargement impossible : " + (e.code || "erreur")); }
 }
 
-function openPinner(pointId, viewOnly) {
-  const p = S.points.find(x => x.id === pointId); if (!p) return;
-  const pl = plans(); if (!pl.length) return;
-  let planId = (p.pin && p.pin.planId) || pl[0].id; let pin = p.pin ? { ...p.pin } : null;
+function openPinner(pointId, viewOnly, opt = {}) {
+  const p = opt.point || S.points.find(x => x.id === pointId); if (!p) return;
+  let pl = plans(); if (!pl.length && viewOnly) return;
+  let planId = (p.pin && p.pin.planId) || pl[0]?.id; let pin = p.pin ? { ...p.pin } : null;
   const n = curPv()?.num || 1e9; const L = $("#layer");
+  const close = () => { L.innerHTML = ""; };
   const draw = () => {
+    pl = plans();
+    if (!pl.length) {
+      L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true"><div class="modal"><div class="modal-h"><h3>Localiser — point ${esc(p.num)}</h3><button class="btn ghost" data-x>Fermer</button></div>
+        <div class="modal-b"><p style="margin:0">Aucun plan dans ce dossier. Importez le plan concerné (image ou PDF, première page) puis cliquez dessus pour placer le point.</p>
+        <label class="btn primary" style="justify-self:start">Importer un plan<input type="file" accept="image/*,application/pdf,.pdf" hidden data-newplan></label></div></div></div>`;
+      L.querySelectorAll("[data-x]").forEach(b => b.onclick = close);
+      L.querySelector("[data-newplan]").onchange = async e => { const f = e.target.files[0]; if (!f) return; const id = await uploadPlan(f); if (id) { await waitFor(() => plans().some(x => x.id === id)); planId = id; } draw(); };
+      return;
+    }
     const plan = pl.find(x => x.id === planId) || pl[0];
     const others = S.points.filter(x => x.id !== p.id && x.pin && x.pin.planId === plan.id && ptState(x, n) && ptState(x, n) !== "past");
     const mine = pin && pin.planId === plan.id ? [{ ...p, pin }] : [];
     L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true" aria-label="Localiser le point"><div class="modal wide">
       <div class="modal-h"><h3>${viewOnly ? "Localisation" : "Localiser"} — point ${esc(p.num)} ${esc(p.titre)}</h3><button class="btn ghost" data-x>Fermer</button></div>
       <div class="modal-b">
-        ${pl.length > 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${pl.map(x => `<button class="btn sm ${x.id === plan.id ? "primary" : ""}" data-plan="${x.id}">${esc(x.nom)}</button>`).join("")}</div>` : ""}
+        ${pl.length > 1 || !viewOnly ? `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${pl.length > 1 ? pl.map(x => `<button class="btn sm ${x.id === plan.id ? "primary" : ""}" data-plan="${x.id}">${esc(x.nom)}</button>`).join("") : ""}${viewOnly ? "" : `<label class="btn sm">${ICON.plus}Importer un autre plan<input type="file" accept="image/*,application/pdf,.pdf" hidden data-newplan></label>`}</div>` : ""}
         ${viewOnly ? "" : `<p class="small muted" style="margin:0">Cliquez sur le plan pour placer la pastille. Les autres points apparaissent en transparence.</p>`}
         <div class="anno-stage"><div class="anno-wrap plan-pick"><img src="${esc(docSrc(plan))}" alt="${esc(plan.nom)}">${pinsSVG(plan, others.concat(mine), n, { hi: p.id })}</div></div>
       </div>
       <div class="modal-f">${viewOnly ? `<button class="btn" data-x>Fermer</button>` : `${p.pin ? `<button class="btn danger" data-unpin>Retirer du plan</button><span style="flex:1"></span>` : ""}<button class="btn" data-x>Annuler</button><button class="btn primary" data-save ${pin ? "" : "disabled"}>Enregistrer</button>`}</div></div></div>`;
-    L.querySelectorAll("[data-x]").forEach(b => b.onclick = () => L.innerHTML = "");
+    L.querySelectorAll("[data-x]").forEach(b => b.onclick = close);
     L.querySelectorAll("[data-plan]").forEach(b => b.onclick = () => { planId = b.dataset.plan; draw(); });
+    L.querySelector("[data-newplan]")?.addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; const id = await uploadPlan(f); if (id) { await waitFor(() => plans().some(x => x.id === id)); planId = id; } draw(); });
     if (!viewOnly) {
       const svg = L.querySelector(".plan-pick svg");
       svg.addEventListener("click", ev => { const r = svg.getBoundingClientRect(); pin = { planId: plan.id, x: Math.round((ev.clientX - r.left) / r.width * plan.w), y: Math.round((ev.clientY - r.top) / r.height * plan.h) }; draw(); });
-      L.querySelector("[data-save]").onclick = async () => { L.innerHTML = ""; p.pin = pin; renderMain(); await safe(Store.update(dPath() + "/points/" + p.id, { pin })); };
-      L.querySelector("[data-unpin]")?.addEventListener("click", async () => { L.innerHTML = ""; p.pin = null; renderMain(); await safe(Store.update(dPath() + "/points/" + p.id, { pin: null })); });
+      const done = async v => { close(); if (opt.onSave) { opt.onSave(v); return; } p.pin = v; if (!opt.after) renderMain(); await safe(Store.update(dPath() + "/points/" + p.id, { pin: v })); opt.after && opt.after(); };
+      L.querySelector("[data-save]").onclick = () => done(pin);
+      L.querySelector("[data-unpin]")?.addEventListener("click", () => done(null));
     }
   };
   draw();
@@ -1030,7 +1081,14 @@ async function onMainClick(e) {
     "preview": () => openPreview(t.dataset.pv),
     "pt-new": () => { S.edit = { mode: "new", intId: t.dataset.int }; renderMain(); setTimeout(() => $('[data-form="new"] [data-pf="titre"]')?.focus(), 30); },
     "pt-edit": () => { S.edit = { mode: "edit", id: t.dataset.id }; renderMain(); },
-    "pt-cancel": () => { S.edit = null; renderMain(); },
+    "pt-cancel": () => { (S.edit && S.edit.files || []).forEach(f => URL.revokeObjectURL(f.url)); S.edit = null; renderMain(); },
+    "pf-ph-del": () => { const f = S.edit.files.splice(+t.dataset.i, 1)[0]; if (f) URL.revokeObjectURL(f.url); refreshNewPhotos(); },
+    "pf-ph-move": () => { const a = S.edit.files, i = +t.dataset.i, j = i + +t.dataset.dir; if (j >= 0 && j < a.length) { [a[i], a[j]] = [a[j], a[i]]; refreshNewPhotos(); } },
+    "pf-pin": () => { const form = t.closest(".pform"); const id = form.dataset.form;
+      if (id !== "new") { openPinner(id, false, { after: () => { const el = document.querySelector(`.pform[data-form="${id}"] [data-pf-pininfo]`); const p = S.points.find(x => x.id === id); if (el && p) el.innerHTML = pinInfo(p.pin); } }); return; }
+      const iid = form.querySelector('[data-pf="intId"]').value; const it = iid === "gen" ? GEN : (D().intervenants || []).find(i => i.id === iid);
+      const tmp = { id: "__new", num: "nouveau", lot: String(it?.lot ?? "0"), titre: form.querySelector('[data-pf="titre"]').value.trim() || "(nouveau point)", pin: S.edit.pin || null };
+      openPinner(null, false, { point: tmp, onSave: pin => { S.edit.pin = pin; const el = document.querySelector('.pform[data-form="new"] [data-pf-pininfo]'); if (el) el.innerHTML = pinInfo(pin); } }); },
     "pt-save": () => savePoint(t.closest(".pform")),
     "pt-del": () => delPoint(t.dataset.id),
     "pt-decide": () => decide(t.dataset.id, t.dataset.v),
@@ -1071,6 +1129,7 @@ async function onMainChange(e) {
   if (ds.docname) { const x = S.docs.find(y => y.id === ds.docname); const v = t.value.trim(); if (x && v) { x.nom = v; return safe(Store.update(dPath() + "/docs/" + x.id, { nom: v })); } return; }
   if (ds.todo) { const [pid, tid] = ds.todo.split(":"); const p = S.points.find(x => x.id === pid); return setTodo(pid, (p.todo || []).map(x => x.id === tid ? { ...x, done: t.checked } : x)); }
   if (ds.photos) { const files = [...t.files]; t.value = ""; return addPhotos(ds.photos, files); }
+  if ("pfNewphotos" in ds) { const files = [...t.files]; t.value = ""; if (!S.edit) return; S.edit.files = [...(S.edit.files || []), ...files.map(file => ({ file, url: URL.createObjectURL(file) }))]; refreshNewPhotos(); return; }
   if (ds.intF) { const [iid, k] = ds.intF.split(":"); return setIntField(iid, k, t.type === "checkbox" ? t.checked : t.value.trim()); }
   if (ds.intLogo) { const f = t.files[0]; t.value = ""; if (f) { const url = await imgToDataUrl(f, 240, "image/png"); setIntField(ds.intLogo, "logo", url); } return; }
   if (ds.plan) { const [rid, k] = ds.plan.split(":"); return saveDossier({ planning: (d.planning || []).map(r => r.id === rid ? { ...r, [k]: t.value } : r) }); }
@@ -1159,10 +1218,12 @@ async function savePoint(form) {
     const intId = v("intId").value; const it = (d.intervenants || []).find(i => i.id === intId);
     const lot = String(it?.lot ?? "0");
     const seq = Math.max(0, ...S.points.filter(p => String(p.lot) === lot).map(p => p.seq || 0)) + 1;
-    const p = { num: `${lot}.${String(seq).padStart(2, "0")}`, lot, seq, intId, titre, texte: v("texte").value.trim(), echeance: v("echeance").value, memo, also, todo: [], pin: null, pv: n, events: urgent ? { [n]: "urgent" } : {}, notes: {}, createdAt: Date.now() };
-    S.edit = null;
-    await safe(Store.set(dPath() + "/points/" + uid(), p));
-    toast(`Point ${p.num} créé`);
+    const files = (S.edit && S.edit.files) || []; const pin = (S.edit && S.edit.pin) || null;
+    const p = { num: `${lot}.${String(seq).padStart(2, "0")}`, lot, seq, intId, titre, texte: v("texte").value.trim(), echeance: v("echeance").value, memo, also, todo: [], pin, pv: n, events: urgent ? { [n]: "urgent" } : {}, notes: {}, createdAt: Date.now() };
+    S.edit = null; const id = uid();
+    await safe(Store.set(dPath() + "/points/" + id, p));
+    toast(`${intId === "gen" ? "Commentaire" : "Point"} ${p.num} créé`);
+    if (files.length) { await addPhotos(id, files.map(f => f.file)); files.forEach(f => URL.revokeObjectURL(f.url)); }
   } else {
     const p = S.points.find(x => x.id === form.dataset.form);
     const patch = { titre, texte: v("texte").value.trim(), echeance: v("echeance").value, memo, also };
@@ -1750,12 +1811,15 @@ function docHTML(pv, R = REP_DEFAULT) {
     const phs = R.photos ? photosOf(p.id) : []; const note = (p.notes || {})[n];
     const also = (p.also || []).map(id => byId[id]).filter(Boolean);
     const plan = R.plans && p.pin && S.docs.find(x => x.id === p.pin.planId);
-    return `<div class="dp s-${st}"><div class="h"><span class="pnum" style="background:${lotColor(p.lot)}">${esc(p.num)}</span><b>${esc(p.titre)}</b>${tag}${due}${plan ? `<span class="tg due">Plan : ${esc(plan.nom)}</span>` : ""}</div>
+    return `<div class="dp s-${st}"><div class="h"><span class="pnum" style="background:${lotColor(p.lot)}">${esc(p.num)}</span><b>${esc(p.titre)}</b>${tag}${due}</div>
       ${also.length ? `<div style="font-size:11px;color:#555">Concerne aussi : ${also.map(i => `lot ${esc(i.lot)} ${esc(i.nom)}`).join(", ")}</div>` : ""}
       ${p.texte ? `<div class="tx rich">${richHtml(p.texte)}</div>` : ""}${note ? `<div class="tx rich"><i>${esc(fmt(pv.date))} :</i> ${richHtml(note)}</div>` : ""}
       ${(p.todo || []).length ? `<div class="td">${p.todo.map(t => `<div>${box(t.done)} ${esc(t.t)}</div>`).join("")}</div>` : ""}
-      ${phs.length ? `<div class="phs r${R.perRow}">${phs.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}</div>`;
+      ${phs.length ? `<div class="phs r${R.perRow}">${phs.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
+      ${plan ? `<figure class="pl ppl"><div class="fig"><img src="${esc(docSrc(plan))}" alt="">${pinsSVG(plan, [p], n, { cls: "" })}</div><figcaption>Localisation : ${esc(plan.nom)}</figcaption></figure>` : ""}</div>`;
   };
+  const genPts = S.points.filter(p => p.intId === "gen" && visible(p) || (p.intId === "gen" && only && ptState(p, n) && (R.realises || ptState(p, n) !== "realise"))).sort((x, y) => x.seq - y.seq);
+  const genCur = genPts.filter(p => !["past", "realise"].includes(ptState(p, n))), genPast = [...genPts.filter(p => ptState(p, n) === "past"), ...genPts.filter(p => ptState(p, n) === "realise")];
   const blocks = (only ? [only] : list).map(i => {
     const all = S.points.filter(p => p.intId === i.id && visible(p)).sort((x, y) => x.seq - y.seq);
     const pts = all.filter(p => !["past", "realise"].includes(ptState(p, n))), past = [...all.filter(p => ptState(p, n) === "past"), ...all.filter(p => ptState(p, n) === "realise")];
@@ -1766,7 +1830,6 @@ function docHTML(pv, R = REP_DEFAULT) {
       ${only ? "" : refs.map(p => `<div style="font-size:11.5px;color:#444;margin:2px 0 6px 10px">Concerné aussi par le point <b>${esc(p.num)}</b> — ${esc(p.titre)}</div>`).join("")}`;
   }).join("");
   const others = only ? S.points.filter(p => p.intId !== only.id && (p.also || []).includes(only.id) && visible(p)).sort((x, y) => x.num.localeCompare(y.num, "fr", { numeric: true })) : [];
-  const plansHtml = R.plans ? plans().map(pl => { const pts = S.points.filter(p => p.pin && p.pin.planId === pl.id && visible(p) && !["realise", "past"].includes(ptState(p, n))); return pts.length ? `<figure class="pl"><div class="fig"><img src="${esc(docSrc(pl))}" alt="">${pinsSVG(pl, pts, n, { cls: "" })}</div><figcaption>${esc(pl.nom)} — ${pts.length} point(s)</figcaption></figure>` : ""; }).join("") : "";
   const nextTxt = pr.date ? `Prochaine réunion le ${esc(fmtLong(pr.date))}${pr.heure ? " à " + esc(pr.heure.replace(":", "h")) : ""}${pr.lieu ? " — " + esc(pr.lieu) : ""}` : "";
   const plan = R.planning && d.planningInPv !== false ? gantt(d, true) : "";
   return `<article class="doc">
@@ -1785,12 +1848,11 @@ function docHTML(pv, R = REP_DEFAULT) {
     ${nextTxt ? `<p><span class="hl">${nextTxt}</span></p>` : ""}${d.reunionTexte ? `<p><span class="hl">${esc(d.reunionTexte)}</span></p>` : ""}
     <p>${esc(d.diffusion ?? DIFFUSION)}</p>
     <div class="pb"></div>
-    ${(() => { const gp = R.photos ? photosOf("gen", pv.num) : []; return pv.commentaires || gp.length ? `<h2>Commentaires généraux</h2>${pv.commentaires ? `<div class="rich">${richHtml(pv.commentaires)}</div>` : ""}${gp.length ? `<div style="font-size:11px;color:#444;margin-top:8px">Photos d'avancement du chantier</div><div class="phs r${R.perRow}">${gp.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}` : ""; })()}
+    ${(() => { const gp = R.photos ? photosOf("gen", pv.num) : []; return genCur.length || genPast.length || pv.commentaires || gp.length ? `<h2>Commentaires généraux</h2>${genCur.map(pt).join("")}${genPast.length ? `<div class="past-h">Commentaires traités</div>${genPast.map(pt).join("")}` : ""}${pv.commentaires ? `<div class="rich" style="margin-top:6px">${richHtml(pv.commentaires)}</div>` : ""}${gp.length ? `<div style="font-size:11px;color:#444;margin-top:8px">Photos d'avancement du chantier</div><div class="phs r${R.perRow}">${gp.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}` : ""; })()}
     ${plan ? `<h2>Planning prévisionnel</h2>${plan}` : ""}
     <h2>Avancement lot par lot</h2>
     ${blocks}
     ${others.length ? `<h2>Autres points vous concernant</h2>${others.map(pt).join("")}` : ""}
-    ${plansHtml ? `<h2>Localisation sur plans</h2>${plansHtml}` : ""}
     <div class="ft">${esc(d.code)} — compte rendu n° ${n} du ${fmt(pv.date)}${only ? " — extrait" : ""}</div>
   </article>`;
 }
@@ -1818,7 +1880,7 @@ function openPreview(id) {
         <fieldset class="also"><legend>Contenu</legend>
           <label><input type="checkbox" class="chk" data-r="realises" ${R.realises ? "checked" : ""}> Points réalisés et traités (repliés)</label>
           <label><input type="checkbox" class="chk" data-r="photos" ${R.photos ? "checked" : ""}> Photos</label>
-          <label><input type="checkbox" class="chk" data-r="plans" ${R.plans ? "checked" : ""}> Plans localisés</label>
+          <label><input type="checkbox" class="chk" data-r="plans" ${R.plans ? "checked" : ""}> Localisation sur plan</label>
           <label><input type="checkbox" class="chk" data-r="planning" ${R.planning ? "checked" : ""}> Planning</label></fieldset>
         <label class="f">Photos par ligne<select data-r="perRow"><option value="2" ${R.perRow == 2 ? "selected" : ""}>2 (grandes)</option><option value="3" ${R.perRow == 3 ? "selected" : ""}>3</option><option value="4" ${R.perRow == 4 ? "selected" : ""}>4 (vignettes)</option></select></label>
         <div data-mailbox></div>
@@ -1850,7 +1912,7 @@ async function exportHtml(pv, R = REP_DEFAULT) {
   for (const img of holder.querySelectorAll("img")) { try { img.setAttribute("src", await toDataUrl(img.getAttribute("src"))); } catch {} }
   const css = document.querySelector("style").textContent;
   const d = D(); const only = R.only && (d.intervenants || []).find(i => i.id === R.only);
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(d.code)} — CR n°${pv.num}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet"><style>${css} :root{color-scheme:light} body{background:#5b6166}</style></head><body><div class="doc-stage">${holder.innerHTML}</div><script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`;
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(d.code)} — PV n°${pv.num}</title><link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet"><style>${css} :root{color-scheme:light} body{background:#5b6166}</style></head><body><div class="doc-stage">${holder.innerHTML}</div><script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`;
   const filename = `${safeId(d.code)}_CR${String(pv.num).padStart(2, "0")}_${pv.date || ""}${only ? "_lot" + safeId(only.lot) : ""}.html`;
   if (CAP.downloads) { try { await CAP.downloads.save({ filename, data: new Blob([html], { type: "text/html" }) }); toast("Fichier enregistré — ouvrez-le pour l'imprimer en PDF"); } catch (e) { if (e && e.code !== "cancelled" && e.code !== "declined") toast("Téléchargement impossible : " + (e.code || "erreur")); } return; }
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" })); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);

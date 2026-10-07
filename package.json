@@ -109,7 +109,7 @@
         "ext": "agoarv",
         "name": "Dossier PV (ancien format)",
         "description": "Dossier de suivi de chantier AGOA (ancien format)",
-        "icon": "pv",
+        "icon": "agoarv",
         "role": "Editor"
       }
     ],
