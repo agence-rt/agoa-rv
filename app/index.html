@@ -358,7 +358,7 @@ fieldset.also label{display:flex;align-items:center;gap:6px;font-size:13px}
     </div>
     <div class="rail-cur" id="railCur"></div>
     <div style="flex:1"></div>
-    <div class="rail-foot"><div style="display:grid;gap:2px"><span id="storeInfo">Connexion…</span><span id="appVer"></span></div><div style="display:flex;gap:4px"><button class="btn ghost sm" id="btnSettings" title="Paramètres de l'agence">Agence</button></div></div>
+    <div class="rail-foot"><div style="display:grid;gap:2px"><span id="storeInfo">Connexion…</span><span id="appVer"></span></div><div style="display:flex;gap:4px"><button class="btn sm" id="btnSettings" title="Options : connexion Ragic, en-têtes de l'agence, mises à jour">Options</button></div></div>
   </aside>
   <main class="main" id="main"></main>
 </div>
@@ -556,7 +556,7 @@ function renderMain() {
     return;
   }
   const scroll = main.scrollTop;
-  const tabs = [["crs", "PV"], ["reunion", "Réunion"], ["intervenants", "Intervenants"], ["planning", "Planning"], ["plans", "Plans & documents"], ["dossier", "Dossier"]];
+  const tabs = [["crs", "PV"], ["reunion", "Réunion"], ["intervenants", "Intervenants"], ["planning", "Planning"], ["plans", "Plans & documents"], ["dossier", "Options"]];
   main.innerHTML = `
   <header class="d-head">
     <div class="row">
@@ -964,6 +964,9 @@ function viewDossier(d) {
       <label class="f">Rythme des réunions (repris sur le compte rendu)<input type="text" data-dfield="reunionTexte" value="${esc(d.reunionTexte || "")}" placeholder="Les réunions de chantier se tiennent tous les lundis à 14h"></label>
       <label class="f">Mention de diffusion<textarea data-dfield="diffusion" rows="2">${esc(d.diffusion ?? DIFFUSION)}</textarea></label>
     </div></section>
+  ${NATIVE ? `<section class="sec"><div class="sec-h"><h3>Connexion Ragic (ce poste)</h3></div><div class="sec-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <span class="small">${window.agoa.getConfig().ragicKey ? "Clé API renseignée." : `<span style="color:var(--warn)">Aucune clé API Ragic sur ce poste.</span>`}</span>
+      <button class="btn sm" data-open-opts>Configurer la connexion Ragic et les en-têtes…</button></div></section>` : `<section class="sec"><div class="sec-b"><button class="btn sm" data-open-opts>En-têtes de l'agence…</button></div></section>`}
   ${NATIVE ? `<section class="sec"><div class="sec-h"><h3>Fichier du dossier</h3></div><div class="sec-b small">${d.fichier ? `Enregistré automatiquement dans <b>${esc(d.fichier)}</b>` : `<span style="color:var(--warn)">Ce dossier n'est enregistré dans aucun fichier .pv.</span> Utilisez « Enregistrer sous… » ci-dessous.`}</div></section>` : ""}
   <section class="sec"><div class="sec-h"><h3>Classement</h3></div>
     <div class="sec-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -1241,19 +1244,22 @@ function openAgence() {
   const cur = k => ({ ...PROFILS[k], ...(st.profils[k] || {}) });
   const draw = () => { const a = cur(st.k);
   L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true"><div class="modal">
-    <div class="modal-h"><h3>En-têtes de l'agence</h3><button class="btn ghost" data-x>Fermer</button></div>
+    <div class="modal-h"><h3>Options</h3><button class="btn ghost" data-x>Fermer</button></div>
     <div class="modal-b">
+      ${NATIVE ? (() => { const c = window.agoa.getConfig(); return `<fieldset class="also" style="flex-direction:column;align-items:stretch"><legend>Connexion Ragic (ce poste)</legend>
+        <p class="small muted" style="margin:0">La clé API se génère depuis votre compte Ragic. Elle reste enregistrée sur ce poste uniquement.</p>
+        <label class="f" style="display:grid;gap:4px">Serveur Ragic<input type="text" data-rhost value="${esc(c.ragicHost || "https://eu2.ragic.com")}"></label>
+        <label class="f" style="display:grid;gap:4px">Clé API Ragic<input type="password" data-rkey value="${esc(c.ragicKey || "")}" autocomplete="off"></label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm" data-rtest>Tester la connexion</button><span class="small muted" data-rtestmsg></span></div>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn sm" data-upd>Rechercher une mise à jour</button><span class="small muted" data-updmsg></span></div></fieldset>`; })() : ""}
+      <h4 style="margin:4px 0 0">En-têtes de l'agence</h4>
       <div class="seg" role="group">${Object.keys(PROFILS).map(k => `<button data-k="${k}" aria-pressed="${k === st.k}">${esc(PROFILS[k].label)}</button>`).join("")}</div>
       <div style="display:flex;gap:14px;align-items:center"><img src="${a.logo || a.def}" alt="Logo" style="max-width:180px;max-height:90px;object-fit:contain;border:1px solid var(--rule);background:#fff;padding:4px">
         <div style="display:grid;gap:6px"><label class="btn sm">Remplacer le logo<input type="file" accept="image/*" hidden data-logo></label>${a.logo ? `<button class="btn ghost sm" data-logo-reset>Revenir au logo fourni</button>` : ""}</div></div>
       <label class="f">Nom (en gras sur l'en-tête)<input type="text" data-nom value="${esc(a.nom)}"></label>
       <label class="f">Lignes d'adresse et mentions<textarea data-lignes rows="4">${esc(a.lignes)}</textarea></label>
       <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="radio" name="defaut" data-def ${st.defaut === st.k ? "checked" : ""}> En-tête par défaut des nouveaux dossiers</label>
-      ${NATIVE ? (() => { const c = window.agoa.getConfig(); return `<fieldset class="also" style="flex-direction:column;align-items:stretch"><legend>Connexion Ragic (ce poste)</legend>
-        <label class="f">Serveur Ragic<input type="text" data-rhost value="${esc(c.ragicHost || "https://eu2.ragic.com")}"></label>
-        <label class="f">Clé API Ragic<input type="password" data-rkey value="${esc(c.ragicKey || "")}" autocomplete="off"></label>
-        <div style="display:flex;gap:8px;align-items:center"><button class="btn sm" data-upd>Rechercher une mise à jour</button><span class="small muted" data-updmsg></span></div></fieldset>`; })() : ""}
-      ${Store.mode === "db" ? `<p class="small muted" style="margin:0">Le choix de l'en-tête se fait ensuite dossier par dossier (onglet Dossier). Ces réglages sont partagés par tous les utilisateurs.</p>` : ""}
+      ${Store.mode === "db" ? `<p class="small muted" style="margin:0">Le choix de l'en-tête se fait ensuite dossier par dossier (onglet Options du dossier). Ces réglages sont partagés par tous les utilisateurs.</p>` : ""}
     </div>
     <div class="modal-f"><button class="btn" data-x>Annuler</button><button class="btn primary" data-save>Enregistrer</button></div></div></div>`;
     const keep = () => { st.profils[st.k] = { ...(st.profils[st.k] || {}), nom: L.querySelector("[data-nom]").value.trim(), lignes: L.querySelector("[data-lignes]").value }; };
@@ -1262,18 +1268,29 @@ function openAgence() {
     L.querySelector("[data-def]").onchange = () => { st.defaut = st.k; };
     L.querySelector("[data-logo]").onchange = async e => { const f = e.target.files[0]; if (!f) return; keep(); st.profils[st.k].logo = await imgToDataUrl(f, 520, "image/png"); draw(); };
     L.querySelector("[data-logo-reset]")?.addEventListener("click", () => { keep(); st.profils[st.k].logo = ""; draw(); });
+    L.querySelector("[data-rtest]")?.addEventListener("click", async () => { const m = L.querySelector("[data-rtestmsg]"); m.textContent = "Test en cours…"; try { m.textContent = await ragicTest(L.querySelector("[data-rhost]").value.trim(), L.querySelector("[data-rkey]").value.trim()); } catch (e) { m.textContent = ragicErr(e); } });
     L.querySelector("[data-upd]")?.addEventListener("click", async () => { const m = L.querySelector("[data-updmsg]"); m.textContent = "Recherche…"; try { m.textContent = await window.agoa.checkUpdates(); } catch (e) { m.textContent = e.message || "Échec"; } });
-    L.querySelector("[data-save]").onclick = async () => { keep(); if (NATIVE) window.agoa.setConfig({ ragicHost: L.querySelector("[data-rhost]").value.trim(), ragicKey: L.querySelector("[data-rkey]").value.trim() }); L.innerHTML = ""; await safe(Store.set("config/agence", { defaut: st.defaut, profils: st.profils })); toast("En-têtes enregistrés"); };
+    L.querySelector("[data-save]").onclick = async () => { keep(); if (NATIVE) window.agoa.setConfig({ ragicHost: L.querySelector("[data-rhost]").value.trim(), ragicKey: L.querySelector("[data-rkey]").value.trim() }); L.innerHTML = ""; await safe(Store.set("config/agence", { defaut: st.defaut, profils: st.profils })); toast("Options enregistrées"); };
   };
   draw();
 }
 
 /* ---------------- Ragic ---------------- */
+function ragicErrHtml(e) {
+  const c = e && e.code;
+  return esc(ragicErr(e)) + (NATIVE && (c === "no_key" || c === "auth") ? ` <button class="btn sm" data-open-opts>Ouvrir la connexion Ragic</button>` : "");
+}
+document.addEventListener("click", ev => { if (ev.target.closest("[data-open-opts]")) { ev.preventDefault(); openAgence(); } });
+async function ragicTest(host, key) {
+  if (host !== undefined) window.agoa.setConfig({ ragicHost: host, ragicKey: key });
+  const p = await ragic("list_page", { sheet_id: RAGIC.ops, limit: 1 });
+  return (p.records || []).length ? "Connexion à Ragic réussie." : "Connexion établie (aucune opération lue).";
+}
 function ragicErr(e) {
   const c = e && e.code;
   return ({
-    no_key: "Renseignez le serveur et la clé API Ragic dans Agence › Connexion Ragic.",
-    auth: "Ragic a refusé la clé API : vérifiez-la dans Agence › Connexion Ragic.",
+    no_key: "La connexion à Ragic n'est pas configurée sur ce poste : renseignez la clé API Ragic dans Options › Connexion Ragic.",
+    auth: "Ragic a refusé la clé API : vérifiez-la dans Options › Connexion Ragic.",
     network: "Ragic est injoignable : vérifiez la connexion Internet.",
     needs_reauth: "La connexion à Ragic a expiré. Reconnectez Ragic dans claude.ai › Paramètres › Connecteurs.",
     server_not_connected: "Le connecteur Ragic n'est pas ajouté à votre compte. Ajoutez-le dans claude.ai › Paramètres › Connecteurs.",
@@ -1387,9 +1404,9 @@ function openEntSearch() {
           L.innerHTML = "";
           await saveDossier({ intervenants: [...list, { id: uid(), lot, nom, role: g(e, "Travaux réalisés"), contact: g(e, "Gérant", "Chargé d'affaire / AO"), tel: g(e, "Portable", "Téléphone gérant", "Téléphone"), email: g(e, "E-mail gérant", "E-mail"), logo: "", convoque: true, ragicEnt: b.dataset.rid }] });
           toast(`${nom} ajoutée en lot ${lot}`);
-        } catch (err) { msg.innerHTML = `<div class="msg err">${esc(ragicErr(err))}</div>`; }
+        } catch (err) { msg.innerHTML = `<div class="msg err">${ragicErrHtml(err)}</div>`; }
       });
-    } catch (err) { msg.innerHTML = `<div class="msg err">${esc(ragicErr(err))}</div>`; }
+    } catch (err) { msg.innerHTML = `<div class="msg err">${ragicErrHtml(err)}</div>`; }
   };
   L.querySelector("[data-go]").onclick = go; q.onkeydown = ev => { if (ev.key === "Enter") go(); };
 }
@@ -1546,9 +1563,9 @@ function openNewDossier() {
               built = buildFromRagic(det.rec, det.ae, chosen);
               pick.innerHTML = `<div class="msg"><b>${esc(built.dossier.code)}</b> — ${esc(built.dossier.objet)}<br>${esc(built.dossier.adresse)}<br>${built.intervenants.length} intervenants pré-remplis (architecte, maître d'ouvrage${built.intervenants.length > 2 ? ", " + (built.intervenants.length - 2) + " entreprise(s)" : ""}) · ${built.planning.length} tâche(s) de planning</div>`;
               create.disabled = false;
-            } catch (e) { pick.innerHTML = `<div class="msg err">${esc(ragicErr(e))}</div>`; }
+            } catch (e) { pick.innerHTML = `<div class="msg err">${ragicErrHtml(e)}</div>`; }
           });
-        } catch (e) { msg.innerHTML = `<div class="msg err">${esc(ragicErr(e))}</div>`; }
+        } catch (e) { msg.innerHTML = `<div class="msg err">${ragicErrHtml(e)}</div>`; }
       };
       L.querySelector("[data-go]").onclick = go; inp.onkeydown = ev => { if (ev.key === "Enter") go(); };
       create.onclick = () => built && createDossier(built);

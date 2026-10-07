@@ -17,7 +17,7 @@ Les mises à jour automatiques s'installent dans le même dossier, sans repasser
 Pour changer de dossier ensuite, relancer l'installateur téléchargé (ou désinstaller puis réinstaller).
 Les données (`%APPDATA%\AGOA PV`) ne sont pas supprimées à la désinstallation.
 
-Au premier lancement : **Agence › Connexion Ragic**, renseigner la clé API Ragic
+Au premier lancement : **Options › Connexion Ragic** (bouton « Options » en bas à gauche, ou onglet Options d'un dossier), renseigner la clé API Ragic
 (le serveur `https://eu2.ragic.com` est prérempli). La clé reste sur le poste (`%APPDATA%\AGOA PV\agoa-rv-config.json`),
 elle n'est jamais envoyée sur GitHub.
 
@@ -27,7 +27,7 @@ Au lancement, pendant l'écran de démarrage « AGOA PV CHANTIER », l'applicati
 les Releases de ce dépôt (6 s au plus ; hors connexion, elle démarre normalement).
 Si une version plus récente existe, l'écran l'indique, la télécharge (progression affichée),
 l'installe puis relance AGOA PV, sans intervention. En cours d'utilisation,
-**Agence › Rechercher une mise à jour** propose la mise à jour.
+**Options › Rechercher une mise à jour** propose la mise à jour.
 
 ## Accès réservé (identification Google)
 
