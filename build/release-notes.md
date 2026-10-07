@@ -1,1 +1,1 @@
-Déploiement n°20 — Onglet Rédaction ; PV n° dans les listes ; commentaires généraux sous forme de points qui reviennent tant qu'ils ne sont pas validés ; photos et localisation sur plan directement dans la saisie du point ; plan affiché dans le point ; première version Mac
+Déploiement n°21 — Photos et localisation sur plan ajoutées après la création du point (numérotation préservée) ; bouton Localiser sur un plan dans chaque point
