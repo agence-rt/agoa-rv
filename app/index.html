@@ -569,6 +569,7 @@ function renderMain() {
     <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${l}</button>`).join("")}</div>
   </header>
   <div class="body">${({ reunion: viewReunion, intervenants: viewIntervenants, planning: viewPlanning, plans: viewPlans, crs: viewCrs, dossier: viewDossier })[S.tab](d)}</div>`;
+  if (S.tab === "dossier") openAgence($("#optsInline"));
   main.scrollTop = scroll;
 }
 
@@ -964,9 +965,7 @@ function viewDossier(d) {
       <label class="f">Rythme des réunions (repris sur le compte rendu)<input type="text" data-dfield="reunionTexte" value="${esc(d.reunionTexte || "")}" placeholder="Les réunions de chantier se tiennent tous les lundis à 14h"></label>
       <label class="f">Mention de diffusion<textarea data-dfield="diffusion" rows="2">${esc(d.diffusion ?? DIFFUSION)}</textarea></label>
     </div></section>
-  ${NATIVE ? `<section class="sec"><div class="sec-h"><h3>Connexion Ragic (ce poste)</h3></div><div class="sec-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <span class="small">${window.agoa.getConfig().ragicKey ? "Clé API renseignée." : `<span style="color:var(--warn)">Aucune clé API Ragic sur ce poste.</span>`}</span>
-      <button class="btn sm" data-open-opts>Configurer la connexion Ragic et les en-têtes…</button></div></section>` : `<section class="sec"><div class="sec-b"><button class="btn sm" data-open-opts>En-têtes de l'agence…</button></div></section>`}
+  <div id="optsInline"></div>
   ${NATIVE ? `<section class="sec"><div class="sec-h"><h3>Fichier du dossier</h3></div><div class="sec-b small">${d.fichier ? `Enregistré automatiquement dans <b>${esc(d.fichier)}</b>` : `<span style="color:var(--warn)">Ce dossier n'est enregistré dans aucun fichier .pv.</span> Utilisez « Enregistrer sous… » ci-dessous.`}</div></section>` : ""}
   <section class="sec"><div class="sec-h"><h3>Classement</h3></div>
     <div class="sec-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -1239,13 +1238,13 @@ function askConfirm(title, text, okLabel = "Confirmer", typeToConfirm = "") {
   });
 }
 
-function openAgence() {
-  const L = $("#layer"); const st = { k: S.cfg.defaut || "rt", defaut: S.cfg.defaut || "rt", profils: JSON.parse(JSON.stringify(S.cfg.profils || {})) };
+function openAgence(target) {
+  const inline = !!target; const L = target || $("#layer"); const st = { k: S.cfg.defaut || "rt", defaut: S.cfg.defaut || "rt", profils: JSON.parse(JSON.stringify(S.cfg.profils || {})) };
   const cur = k => ({ ...PROFILS[k], ...(st.profils[k] || {}) });
   const draw = () => { const a = cur(st.k);
-  L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true"><div class="modal">
-    <div class="modal-h"><h3>Options</h3><button class="btn ghost" data-x>Fermer</button></div>
-    <div class="modal-b">
+  L.innerHTML = `${inline ? `<section class="sec"><div class="sec-h"><h3>Options générales</h3><span class="hint">Valables pour tous les dossiers</span></div>` : `<div class="ov-bg" role="dialog" aria-modal="true"><div class="modal">
+    <div class="modal-h"><h3>Options</h3><button class="btn ghost" data-x>Fermer</button></div>`}
+    <div class="${inline ? "sec-b" : "modal-b"}" style="display:grid;gap:12px">
       ${NATIVE ? (() => { const c = window.agoa.getConfig(); return `<fieldset class="also" style="flex-direction:column;align-items:stretch"><legend>Connexion Ragic (ce poste)</legend>
         <p class="small muted" style="margin:0">La clé API se génère depuis votre compte Ragic. Elle reste enregistrée sur ce poste uniquement.</p>
         <label class="f" style="display:grid;gap:4px">Serveur Ragic<input type="text" data-rhost value="${esc(c.ragicHost || "https://eu2.ragic.com")}"></label>
@@ -1261,16 +1260,17 @@ function openAgence() {
       <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="radio" name="defaut" data-def ${st.defaut === st.k ? "checked" : ""}> En-tête par défaut des nouveaux dossiers</label>
       ${Store.mode === "db" ? `<p class="small muted" style="margin:0">Le choix de l'en-tête se fait ensuite dossier par dossier (onglet Options du dossier). Ces réglages sont partagés par tous les utilisateurs.</p>` : ""}
     </div>
-    <div class="modal-f"><button class="btn" data-x>Annuler</button><button class="btn primary" data-save>Enregistrer</button></div></div></div>`;
+    <div class="modal-f">${inline ? "" : `<button class="btn" data-x>Annuler</button>`}<button class="btn primary" data-save>Enregistrer les options</button></div>${inline ? "</section>" : "</div></div>"}`;
     const keep = () => { st.profils[st.k] = { ...(st.profils[st.k] || {}), nom: L.querySelector("[data-nom]").value.trim(), lignes: L.querySelector("[data-lignes]").value }; };
     L.querySelectorAll("[data-x]").forEach(b => b.onclick = () => L.innerHTML = "");
+    const close = () => { if (inline) draw(); else L.innerHTML = ""; };
     L.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { keep(); st.k = b.dataset.k; draw(); });
     L.querySelector("[data-def]").onchange = () => { st.defaut = st.k; };
     L.querySelector("[data-logo]").onchange = async e => { const f = e.target.files[0]; if (!f) return; keep(); st.profils[st.k].logo = await imgToDataUrl(f, 520, "image/png"); draw(); };
     L.querySelector("[data-logo-reset]")?.addEventListener("click", () => { keep(); st.profils[st.k].logo = ""; draw(); });
     L.querySelector("[data-rtest]")?.addEventListener("click", async () => { const m = L.querySelector("[data-rtestmsg]"); m.textContent = "Test en cours…"; try { m.textContent = await ragicTest(L.querySelector("[data-rhost]").value.trim(), L.querySelector("[data-rkey]").value.trim()); } catch (e) { m.textContent = ragicErr(e); } });
     L.querySelector("[data-upd]")?.addEventListener("click", async () => { const m = L.querySelector("[data-updmsg]"); m.textContent = "Recherche…"; try { m.textContent = await window.agoa.checkUpdates(); } catch (e) { m.textContent = e.message || "Échec"; } });
-    L.querySelector("[data-save]").onclick = async () => { keep(); if (NATIVE) window.agoa.setConfig({ ragicHost: L.querySelector("[data-rhost]").value.trim(), ragicKey: L.querySelector("[data-rkey]").value.trim() }); L.innerHTML = ""; await safe(Store.set("config/agence", { defaut: st.defaut, profils: st.profils })); toast("Options enregistrées"); };
+    L.querySelector("[data-save]").onclick = async () => { keep(); if (NATIVE) window.agoa.setConfig({ ragicHost: L.querySelector("[data-rhost]").value.trim(), ragicKey: L.querySelector("[data-rkey]").value.trim() }); close(); await safe(Store.set("config/agence", { defaut: st.defaut, profils: st.profils })); toast("Options enregistrées"); };
   };
   draw();
 }
