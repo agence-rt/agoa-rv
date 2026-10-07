@@ -1,1 +1,1 @@
-Déploiement n°19 — Numéro de PV modifiable ; code d'accès de l'immeuble relié à Ragic ; mise en forme du texte (gras, souligné, surligné, taille, puces, justification) ; photos d'avancement dans les commentaires généraux ; ordre des photos modifiable ; adresse du serveur Ragic corrigée automatiquement
+Déploiement n°20 — Onglet Rédaction ; PV n° dans les listes ; commentaires généraux sous forme de points qui reviennent tant qu'ils ne sont pas validés ; photos et localisation sur plan directement dans la saisie du point ; plan affiché dans le point ; première version Mac
