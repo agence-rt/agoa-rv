@@ -22,11 +22,24 @@ elle n'est jamais envoyée sur GitHub.
 
 ## Mises à jour
 
-Au lancement, l'application interroge les Releases de ce dépôt. Si une version plus récente
-existe, elle affiche la version disponible et ses nouveautés, et propose « Mettre à jour
-maintenant » ou « Plus tard ». Si l'utilisateur accepte, la mise à jour se télécharge
-(progression dans la barre des tâches), s'installe et l'application redémarre. Aucune
-réinstallation. Vérification manuelle : **Agence › Rechercher une mise à jour**.
+Au lancement, pendant l'écran de démarrage « AGOA PV CHANTIER », l'application interroge
+les Releases de ce dépôt (6 s au plus ; hors connexion, elle démarre normalement).
+Si une version plus récente existe, l'écran l'indique, la télécharge (progression affichée),
+l'installe puis relance AGOA PV, sans intervention. En cours d'utilisation,
+**Agence › Rechercher une mise à jour** propose la mise à jour.
+
+## Accès réservé (identification Google)
+
+Au premier lancement sur un poste, AGOA PV demande de se connecter avec Google (navigateur
+par défaut). Seuls les comptes autorisés peuvent l'utiliser ; l'identification est ensuite
+mémorisée, chiffrée par Windows pour la session de l'utilisateur.
+
+Réglages dans `package.json` → `agoa.google` :
+- `clientId` / `clientSecret` : client OAuth Google de type « Application de bureau » ;
+- `allowed` : empreintes SHA-256 des adresses autorisées (en minuscules), pour ne pas publier
+  les adresses en clair dans ce dépôt public.
+
+Tant que `clientId` est vide, l'identification est désactivée.
 
 ## Données
 

@@ -12,7 +12,12 @@
   "private": true,
   "main": "main.js",
   "agoa": {
-    "deploiement": 14
+    "deploiement": 14,
+    "google": {
+      "clientId": "",
+      "clientSecret": "",
+      "allowed": []
+    }
   },
   "scripts": {
     "start": "electron .",
@@ -37,6 +42,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "login-preload.js",
       "app/**/*",
       "package.json"
     ],
