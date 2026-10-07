@@ -45,14 +45,26 @@ function ragicCfg() {
   if (!c.ragicKey) throw new Error("[no_key] Clé API Ragic manquante");
   return { host: (c.ragicHost || "https://eu2.ragic.com").replace(/\/+$/, ""), key: c.ragicKey };
 }
+// Clé passée dans l'adresse (?APIKey=…), méthode documentée par Ragic pour une clé API seule :
+// l'en-tête « Authorization: Basic » attend base64(e-mail:clé) et, mal formé, Ragic répond sans aucune fiche.
 async function ragicGet(url, key) {
   let r;
-  try { r = await fetch(url, { headers: { Authorization: "Basic " + key } }); }
+  const full = url + (url.includes("?") ? "&" : "?") + "APIKey=" + encodeURIComponent(key);
+  try { r = await fetch(full); }
   catch (e) { throw new Error("[network] " + e.message); }
   if (r.status === 401 || r.status === 403) throw new Error("[auth] Accès refusé par Ragic");
   if (!r.ok) throw new Error("[tool_error] Ragic HTTP " + r.status);
-  const j = await r.json();
-  if (j && j.status === "ERROR") throw new Error("[tool_error] " + (j.msg || "Erreur Ragic"));
+  const txt = await r.text();
+  let j;
+  try { j = JSON.parse(txt); }
+  catch { throw new Error(/<html|login/i.test(txt) ? "[auth] Ragic demande une connexion : clé API non reconnue" : "[tool_error] Réponse Ragic illisible"); }
+  if (j && (j.status === "ERROR" || j.status === "INVALID")) {
+    const m = j.msg || j.message || "Erreur Ragic";
+    throw new Error((/auth|key|login|permission|denied|cl[ée]/i.test(m) ? "[auth] " : "[tool_error] ") + m);
+  }
+  // Réponse sans fiche mais avec d'autres informations (message, code) : on la montre plutôt que « 0 résultat ».
+  const keys = j && typeof j === "object" ? Object.keys(j) : [];
+  if (keys.length && !keys.some(k => /^\d+$/.test(k))) throw new Error("[tool_error] Réponse Ragic inattendue : " + txt.slice(0, 200));
   return j;
 }
 function whereParams(filters) {
