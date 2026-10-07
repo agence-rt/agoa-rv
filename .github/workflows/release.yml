@@ -1,9 +1,8 @@
-# Fabrique les installateurs Windows et Mac et les publie dans la Release GitHub
+# Fabrique l'installateur Windows et le publie dans la Release GitHub
 # dès que la version de package.json change sur main (nouveau déploiement).
 # L'étiquette vX.Y.Z est créée automatiquement avec la Release.
-# Les postes Windows se mettent ensuite à jour seuls ; les Mac sont invités à télécharger la nouvelle version.
-# Lancement manuel avec « mac_test » : fabrique seulement la version Mac, sans rien publier (fichier joint à l'exécution).
-name: Publication Windows et Mac
+# Les postes installés se mettent ensuite à jour seuls.
+name: Publication Windows
 
 on:
   push:
@@ -13,21 +12,13 @@ on:
       - "package.json"
       - ".github/workflows/release.yml"
   workflow_dispatch:
-    inputs:
-      mac_test:
-        description: "Fabriquer la version Mac pour essai, sans publier"
-        type: boolean
-        default: false
 
 permissions:
   contents: write
 
 jobs:
   windows:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.mac_test) }}
     runs-on: windows-latest
-    outputs:
-      skip: ${{ steps.v.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,52 +71,3 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  mac:
-    # Après Windows (qui crée la Release), ou seul en essai manuel
-    needs: windows
-    if: ${{ always() && ((github.event_name == 'workflow_dispatch' && inputs.mac_test) || (needs.windows.result == 'success' && needs.windows.outputs.skip == 'false')) }}
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Installation des dépendances
-        run: npm ci
-
-      - name: Secret Google (identification)
-        shell: bash
-        env:
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        run: |
-          node -e '
-            const fs = require("fs"); const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            const g = (p.agoa && p.agoa.google) || {};
-            if (g.clientId && !process.env.GOOGLE_CLIENT_SECRET) { console.log("::error::Secret GOOGLE_CLIENT_SECRET absent (Settings > Secrets and variables > Actions)"); process.exit(1); }
-            if (g.clientId) { g.clientSecret = process.env.GOOGLE_CLIENT_SECRET; fs.writeFileSync("package.json", JSON.stringify(p, null, 2)); }
-          '
-
-      - name: Fabrication (et publication sauf essai)
-        shell: bash
-        run: |
-          set -o pipefail
-          PUB=always; [ "${{ github.event_name == 'workflow_dispatch' && inputs.mac_test }}" = "true" ] && PUB=never
-          if ! npx electron-builder --mac --publish $PUB 2>&1 | tee build.log; then
-            grep -v "^\s*at " build.log | tail -25 | while IFS= read -r l; do echo "::error::$l"; done
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-
-      - name: Fichier d'essai
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mac_test }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: AGOA-PV-mac-essai
-          path: dist/*.dmg
-          retention-days: 7
