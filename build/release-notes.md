@@ -1,1 +1,1 @@
-Déploiement n°14 — Barre latérale simplifiée : + Opération et Ouvrir opération
+Déploiement n°15 — Écran de démarrage AGOA PV CHANTIER ; mise à jour automatique au démarrage ; identification Google au premier lancement
