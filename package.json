@@ -14,9 +14,11 @@
   "agoa": {
     "deploiement": 14,
     "google": {
-      "clientId": "",
+      "clientId": "253318887290-luk51sg4fnsg7552foru42v8v8nmrnfj.apps.googleusercontent.com",
       "clientSecret": "",
-      "allowed": []
+      "allowed": [
+        "4c62e33b6805a68d47650fc52009f5cd15c30eb94c0eb44700c8d235c186044a"
+      ]
     }
   },
   "scripts": {

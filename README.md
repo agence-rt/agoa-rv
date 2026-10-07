@@ -35,7 +35,9 @@ par défaut). Seuls les comptes autorisés peuvent l'utiliser ; l'identification
 mémorisée, chiffrée par Windows pour la session de l'utilisateur.
 
 Réglages dans `package.json` → `agoa.google` :
-- `clientId` / `clientSecret` : client OAuth Google de type « Application de bureau » ;
+- `clientId` : client OAuth Google de type « Application de bureau » ; son code secret n'est pas
+  dans ce dépôt : il est stocké dans le secret GitHub Actions `GOOGLE_CLIENT_SECRET` et injecté
+  à la fabrication de l'installateur ;
 - `allowed` : empreintes SHA-256 des adresses autorisées (en minuscules), pour ne pas publier
   les adresses en clair dans ce dépôt public.
 
