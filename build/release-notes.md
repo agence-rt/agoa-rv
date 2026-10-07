@@ -1,1 +1,1 @@
-Déploiement n°17 — Recherche Ragic sous Windows : entreprises et opérations retrouvées sans tenir compte des accents ni des majuscules ; test de connexion sur les opérations et les entreprises
+Déploiement n°18 — Connexion Ragic sous Windows : clé API transmise selon la méthode documentée par Ragic ; message explicite si Ragic refuse la clé
