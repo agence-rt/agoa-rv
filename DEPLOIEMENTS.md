@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°16** — v0.16.0 — 2026-10-07 — Onglet Options : connexion Ragic (avec test), mises à jour et en-têtes de l'agence ; installateur en français avec page d'accueil et vérification du dossier d'installation
 - **n°15** — v0.15.0 — 2026-10-07 — Écran de démarrage AGOA PV CHANTIER ; mise à jour automatique au démarrage ; identification Google au premier lancement
 - **n°14** — v0.14.0 — 2026-10-06 — Barre latérale simplifiée : + Opération et Ouvrir opération
 - **n°13** — v0.13.0 — 2026-10-06 — Ouverture directe des fichiers .pv ; confirmation et enregistrement à la fermeture ; en-tête SELARL REMI THOLLET ARCHITECTE (SIRET, TVA) ; bouton Opération
