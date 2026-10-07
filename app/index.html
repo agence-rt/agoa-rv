@@ -1283,8 +1283,10 @@ function ragicErrHtml(e) {
 document.addEventListener("click", ev => { if (ev.target.closest("[data-open-opts]")) { ev.preventDefault(); openAgence(); } });
 async function ragicTest(host, key) {
   if (host !== undefined) window.agoa.setConfig({ ragicHost: host, ragicKey: key });
-  const p = await ragic("list_page", { sheet_id: RAGIC.ops, limit: 1 });
-  return (p.records || []).length ? "Connexion à Ragic réussie." : "Connexion établie (aucune opération lue).";
+  const ops = ((await ragic("list_page", { sheet_id: RAGIC.ops, limit: 1 })).records || []).length;
+  const ent = ((await ragic("list_page", { sheet_id: RAGIC.ent, limit: 1 })).records || []).length;
+  if (ops && ent) return "Connexion à Ragic réussie : opérations et entreprises lisibles.";
+  return "Connexion établie, mais " + [ops ? "" : "aucune opération", ent ? "" : "aucune entreprise"].filter(Boolean).join(" et ") + " n'a pu être lue : vérifiez les droits de cette clé API dans Ragic.";
 }
 function ragicErr(e) {
   const c = e && e.code;

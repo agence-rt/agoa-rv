@@ -61,14 +61,35 @@ function whereParams(filters) {
     return "&where=" + encodeURIComponent(`${fid},${op},${f.value}`);
   }).join("");
 }
+const norm = v => String(v == null ? "" : Array.isArray(v) ? v.join(" ") : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+// Vrai si chaque terme recherché apparaît dans au moins un champ texte de la fiche (sans accents ni casse).
+// Champs connus de l'application (identifiant Ragic → libellé renvoyé par l'API) ; sinon tous les champs.
+const FIELD_NAMES = { "1000113": "Nom", "1000295": "CODE TRAVAUX", "1000307": "adresse" };
+const matchAll = (rec, likes) => likes.every(f => {
+  const name = FIELD_NAMES[f.fid];
+  const hay = name && rec && name in rec ? norm(rec[name]) : Object.entries(rec || {}).filter(([k]) => !k.startsWith("_")).map(([, v]) => norm(v)).join(" | ");
+  return hay.includes(norm(f.value).trim());
+});
 const toList = obj => Object.entries(obj || {}).filter(([k]) => /^\d+$/.test(k)).map(([id, rec]) => ({ id: Number(id), rec }));
 
 async function ragic(tool, input) {
   const { host, key } = ragicCfg();
   const base = `${host}/${input.apname}${input.sheet_id}`;
   if (tool === "list_page") {
-    const j = await ragicGet(`${base}?api&v=3&limit=${input.limit || 25}${whereParams(input.filters)}`, key);
-    return { records: toList(j).map(x => ({ record_id: x.id, ...x.rec })) };
+    const limit = input.limit || 25;
+    const j = await ragicGet(`${base}?api&v=3&limit=${limit}${whereParams(input.filters)}`, key);
+    let list = toList(j);
+    // Recherche « contient » : l'API HTTP est sensible aux accents et à la casse, contrairement au connecteur
+    // de claude.ai. On complète par la recherche plein texte, puis par un filtrage local de la liste.
+    const likes = Object.entries(input.filters || {}).filter(([, f]) => f && f.op === "like" && String(f.value || "").trim()).map(([fid, f]) => ({ fid, value: f.value }));
+    if (likes.length && list.length < limit) {
+      const seen = new Set(list.map(x => x.id));
+      const add = arr => { for (const x of arr) if (!seen.has(x.id) && matchAll(x.rec, likes)) { seen.add(x.id); list.push(x); } };
+      try { add(toList(await ragicGet(`${base}?api&v=3&limit=200&fts=${encodeURIComponent(likes[0].value)}`, key))); } catch {}
+      if (list.length < limit) add(toList(await ragicGet(`${base}?api&v=3&limit=2000&listing=true`, key)));
+      list = list.slice(0, limit);
+    }
+    return { records: list.map(x => ({ record_id: x.id, ...x.rec })) };
   }
   if (tool === "get_records") {
     if (input.record_id != null) {
