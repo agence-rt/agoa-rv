@@ -21,6 +21,9 @@ Au premier lancement : **Options › Connexion Ragic** (bouton « Options » en 
 (le serveur `https://eu2.ragic.com` est prérempli). La clé reste sur le poste (`%APPDATA%\AGOA PV\agoa-rv-config.json`),
 elle n'est jamais envoyée sur GitHub.
 
+**Assistant de rédaction (IA)** : la baguette magique de la barre de mise en forme reformule un texte. Sur Windows, elle utilise une clé API Anthropic
+à saisir dans **Options › Assistant de rédaction (IA)** (facturée sur ce compte API, stockée sur le poste). Dans la version Claude, aucune clé n'est nécessaire.
+
 ## Mises à jour
 
 Au lancement, pendant l'écran de démarrage « AGOA PV CHANTIER », l'application interroge

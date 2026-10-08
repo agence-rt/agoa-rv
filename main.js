@@ -441,6 +441,25 @@ ipcMain.handle("save-pdf", async (e, filename) => {
   shell.openPath(r.filePath);
   return true;
 });
+// Reformulation par l'IA (baguette magique de l'éditeur) : API Claude avec la clé saisie dans Options.
+const AI_MODEL = "claude-sonnet-5-5";
+ipcMain.handle("ai", async (e, prompt) => {
+  const key = String(readJson(configPath(), {}).anthropicKey || "").trim();
+  if (!key) throw new Error("[no_key] Clé API Claude manquante");
+  let r;
+  try {
+    r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 2000, messages: [{ role: "user", content: String(prompt || "").slice(0, 60000) }] }) });
+  } catch (err) { throw new Error("[network] " + err.message); }
+  let j = {}; try { j = await r.json(); } catch {}
+  if (r.status === 401 || r.status === 403) throw new Error("[auth] " + ((j.error && j.error.message) || "Clé refusée"));
+  if (r.status === 429) throw new Error("[rate_limited] " + ((j.error && j.error.message) || "Trop de demandes"));
+  if (!r.ok) throw new Error("[upstream_error] " + ((j.error && j.error.message) || "HTTP " + r.status));
+  const text = (j.content || []).filter(c => c.type === "text").map(c => c.text).join("").trim();
+  if (!text) throw new Error("[empty_completion] Réponse vide");
+  return text;
+});
 ipcMain.handle("check-updates", async () => {
   if (!app.isPackaged || !updater) return "Disponible uniquement dans la version installée.";
   if (updateState === "downloading") return "Téléchargement en cours…";
