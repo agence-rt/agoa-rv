@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°22** — v0.22.0 — 2026-10-08 — Baguette magique IA dans la barre de mise en forme : reformulation des textes (clé API Anthropic dans Options)
 - **n°21** — v0.21.0 — 2026-10-07 — Photos et localisation sur plan ajoutées après la création du point (numérotation préservée) ; bouton Localiser sur un plan dans chaque point
 - **n°20** — v0.20.0 — 2026-10-07 — Onglet Rédaction ; PV n° dans les listes ; commentaires généraux sous forme de points qui reviennent tant qu'ils ne sont pas validés ; photos et localisation sur plan directement dans la saisie du point ; plan affiché dans le point ; première version Mac
 - **n°19** — v0.19.0 — 2026-10-07 — Numéro de PV modifiable ; code d'accès de l'immeuble relié à Ragic ; mise en forme du texte (gras, souligné, surligné, taille, puces, justification) ; photos d'avancement dans les commentaires généraux ; ordre des photos modifiable ; adresse du serveur Ragic corrigée automatiquement
