@@ -1921,7 +1921,6 @@ function docHTML(pv, R = REP_DEFAULT) {
     <h2>Prochaine réunion</h2>
     ${nextTxt ? `<p><span class="hl">${nextTxt}</span></p>` : ""}${d.reunionTexte ? `<p><span class="hl">${esc(d.reunionTexte)}</span></p>` : ""}
     <p>${esc(d.diffusion ?? DIFFUSION)}</p>
-    <div class="pb"></div>
     ${(() => { const gp = R.photos ? photosOf("gen", pv.num) : []; return genCur.length || genPast.length || pv.commentaires || gp.length ? `<h2>Commentaires généraux</h2>${genCur.map(pt).join("")}${genPast.length ? `<div class="past-h">Commentaires traités</div>${genPast.map(pt).join("")}` : ""}${pv.commentaires ? `<div class="rich" style="margin-top:6px">${richHtml(pv.commentaires)}</div>` : ""}${gp.length ? `<div style="font-size:11px;color:#444;margin-top:8px">Photos d'avancement du chantier</div><div class="phs r${R.perRow}">${gp.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}` : ""; })()}
     ${plan ? `<h2>Planning prévisionnel</h2>${plan}` : ""}
     <h2>Avancement lot par lot</h2>
