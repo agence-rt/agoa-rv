@@ -1,1 +1,1 @@
-Déploiement n°22 — Baguette magique IA dans la barre de mise en forme : reformulation des textes (clé API Anthropic dans Options)
+Déploiement n°23 — Impression PDF : plus de saut de page forcé avant les commentaires généraux
