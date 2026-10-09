@@ -14,7 +14,10 @@
 ; La page ne s'affiche que si le dossier est protégé ; « Précédent » ramène au choix du dossier.
 !macro customPageAfterChangeDir
   Var agoaDirLabel
+  Var agoaShortcutBox
+  Var agoaShortcutState
   Page custom agoaDirCheckPre agoaDirCheckLeave
+  Page custom agoaShortcutPre agoaShortcutLeave
   ; $0 = "1" si le dossier final ($INSTDIR\<appli>) est accessible en écriture.
   Function agoaDirWritable
     Push $1
@@ -63,4 +66,35 @@
       Abort
     ${EndIf}
   FunctionEnd
+
+  ; Proposition d'un raccourci sur le Bureau (coché par défaut ; ignorée lors d'une mise à jour automatique).
+  Function agoaShortcutPre
+    ${If} ${isUpdated}
+      Abort
+    ${EndIf}
+    !insertmacro MUI_HEADER_TEXT "Raccourci" "Souhaitez-vous un raccourci pour lancer AGOA PV ?"
+    nsDialogs::Create 1018
+    Pop $1
+    ${NSD_CreateLabel} 0u 0u 300u 24u "AGOA PV sera accessible depuis le menu Démarrer. Vous pouvez aussi l'ajouter sur le Bureau."
+    Pop $1
+    ${NSD_CreateCheckbox} 0u 34u 300u 12u "Créer un raccourci sur le Bureau"
+    Pop $agoaShortcutBox
+    ${If} $agoaShortcutState == ""
+      StrCpy $agoaShortcutState ${BST_CHECKED}
+    ${EndIf}
+    ${NSD_SetState} $agoaShortcutBox $agoaShortcutState
+    nsDialogs::Show
+  FunctionEnd
+
+  Function agoaShortcutLeave
+    ${NSD_GetState} $agoaShortcutBox $agoaShortcutState
+  FunctionEnd
+!macroend
+
+!macro customInstall
+  ${IfNot} ${isUpdated}
+    ${If} $agoaShortcutState == ${BST_CHECKED}
+      CreateShortcut "$DESKTOP\${SHORTCUT_NAME}.lnk" "$INSTDIR\${APP_EXECUTABLE_FILENAME}" "" "$INSTDIR\${APP_EXECUTABLE_FILENAME}" 0
+    ${EndIf}
+  ${EndIf}
 !macroend

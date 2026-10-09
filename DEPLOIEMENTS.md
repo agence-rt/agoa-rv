@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°24** — v0.24.0 — 2026-10-09 — Installation : proposition d'un raccourci sur le Bureau ; impression PDF : marges haute et basse de 20 mm
 - **n°23** — v0.23.0 — 2026-10-09 — Impression PDF : plus de saut de page forcé avant les commentaires généraux
 - **n°22** — v0.22.0 — 2026-10-08 — Baguette magique IA dans la barre de mise en forme : reformulation des textes (clé API Anthropic dans Options)
 - **n°21** — v0.21.0 — 2026-10-07 — Photos et localisation sur plan ajoutées après la création du point (numérotation préservée) ; bouton Localiser sur un plan dans chaque point
