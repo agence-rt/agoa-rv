@@ -42,9 +42,20 @@ function openAgoarv(file) {
   else pendingFile = { name: path.basename(file), text, file };
 }
 
+/* ---------- connexions partagées (AGOA Launcher > CONNEXIONS) : clé Ragic, clé Claude, compte Google ---------- */
+const { readShared } = require("./shared");
+let SHARED = {};
+function applyShared(c) {   // en mémoire seulement : rien n'est recopié dans le fichier de configuration
+  const o = { ...c };
+  if (SHARED.ragic && SHARED.ragic.key && SHARED.ragic.host) { o.ragicKey = SHARED.ragic.key; o.ragicHost = "https://" + String(SHARED.ragic.host).replace(/^https?:\/\//, ""); }
+  if (SHARED.anthropic && SHARED.anthropic.key) o.anthropicKey = SHARED.anthropic.key;
+  return o;
+}
+const readCfg = () => applyShared(readJson(configPath(), {}));
+
 /* ---------- API Ragic (HTTP) ---------- */
 function ragicCfg() {
-  const c = readJson(configPath(), {});
+  const c = readCfg();
   if (!c.ragicKey) throw new Error("[no_key] Clé API Ragic manquante");
   // Seule l'origine compte (https://eu2.ragic.com) : une adresse collée depuis le navigateur
   // (https://eu2.ragic.com/agoa/...) ajouterait un chemin en trop et Ragic renverrait la liste des feuilles.
@@ -344,6 +355,7 @@ async function ensureAuthorized() {
   if (!authEnabled()) return true;
   const a = readAuth();
   if (a && isAllowed(a.email)) return true;
+  if (SHARED.google && isAllowed(SHARED.google.email)) return true;   // compte déjà connecté dans AGOA Launcher
   closeSplash();
   return await askLogin();
 }
@@ -411,8 +423,9 @@ async function confirmClose() {
 ipcMain.on("info", e => { e.returnValue = INFO; });
 ipcMain.on("load-data", e => { e.returnValue = readJson(dataPath(), {}); });
 ipcMain.on("save-data", (e, text) => { try { writeAtomic(dataPath(), text); } catch (err) { console.error(err); } });
-ipcMain.on("get-config", e => { const { auth, ...c } = readJson(configPath(), {}); e.returnValue = c; });
-ipcMain.on("set-config", (e, patch) => { const { auth, ...p } = patch || {}; writeAtomic(configPath(), JSON.stringify({ ...readJson(configPath(), {}), ...p }, null, 2)); e.returnValue = true; });
+ipcMain.on("get-config", e => { const { auth, ...c } = readCfg(); e.returnValue = c; });
+ipcMain.on("set-config", (e, patch) => { const { auth, ...p } = patch || {}; const sh = applyShared({}); for (const k of Object.keys(sh)) if (p[k] === sh[k]) delete p[k];   // une valeur venue du launcher n'est pas recopiée ici
+   writeAtomic(configPath(), JSON.stringify({ ...readJson(configPath(), {}), ...p }, null, 2)); e.returnValue = true; });
 ipcMain.handle("ragic", (e, tool, input) => ragic(tool, input));
 ipcMain.handle("save-file", async (e, filename, bytes) => {
   const ext = (filename.split(".").pop() || "").toLowerCase();
@@ -444,7 +457,7 @@ ipcMain.handle("save-pdf", async (e, filename) => {
 // Reformulation par l'IA (baguette magique de l'éditeur) : API Claude avec la clé saisie dans Options.
 const AI_MODEL = "claude-sonnet-5-5";
 ipcMain.handle("ai", async (e, prompt) => {
-  const key = String(readJson(configPath(), {}).anthropicKey || "").trim();
+  const key = String(readCfg().anthropicKey || "").trim();
   if (!key) throw new Error("[no_key] Clé API Claude manquante");
   let r;
   try {
@@ -498,6 +511,7 @@ else {
     if (await startupUpdateCheck() === "updating") return;   // (l'application redémarre après installation)
     if (updateState === "downloading" || updateState === "ready") return;
     splashStatus("Vérification de l'accès…");
+    SHARED = await readShared();
     if (!(await ensureAuthorized())) { app.quit(); return; }
     splashStatus("Démarrage…");
     createWindow(); booting = false;

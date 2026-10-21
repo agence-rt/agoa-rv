@@ -1,1 +1,1 @@
-Déploiement n°24 — Installation : proposition d'un raccourci sur le Bureau ; impression PDF : marges haute et basse de 20 mm
+Déploiement n°25 — Connexions partagées : la clé Ragic, la clé Claude et le compte Google d'AGOA Launcher sont repris sans nouvelle saisie
