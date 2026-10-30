@@ -1,1 +1,1 @@
-Déploiement n°27 — Plans : plusieurs repères par point (pastilles, flèches, rectangles de localisation) ; photos : zoom et recadrage
+Déploiement n°28 — Point : possibilité de changer l'intervenant a posteriori (le point est renuméroté dans le bon lot)
