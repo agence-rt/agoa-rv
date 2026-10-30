@@ -88,6 +88,8 @@ img{max-width:100%}
 .empty h2{color:var(--ink);font-stretch:90%;margin:0 0 8px}
 
 .d-head{background:var(--paper);border-bottom:1px solid var(--rule);padding:18px 28px 0;position:sticky;top:0;z-index:5}
+.plan-chip{display:inline-flex;align-items:center;gap:2px}
+.plan-chip .btn.ghost{padding:2px 7px;min-width:0}
 .save-box{display:flex;align-items:center;gap:10px;margin-left:auto}
 .save-st{font-size:12px;color:var(--muted,#777)}
 #btnSave .si{transition:transform .3s}
@@ -947,7 +949,7 @@ function viewPlans(d) {
   return `<section class="sec">
     <div class="sec-h"><h3>Plans</h3><label class="btn primary">${ICON.plus}Ajouter un plan<input type="file" hidden accept="${accept}" data-upload="plan"></label></div>
     ${pl.length ? `<div class="sec-b" style="display:grid;gap:12px">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${pl.map(x => `<button class="btn sm ${x.id === sel.id ? "primary" : ""}" data-act="plan-sel" data-id="${x.id}">${esc(x.nom)}</button>`).join("")}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${pl.map(x => `<span class="plan-chip"><button class="btn sm ${x.id === sel.id ? "primary" : ""}" data-act="plan-sel" data-id="${x.id}">${esc(x.nom)}</button><button class="btn ghost sm danger" data-act="doc-del" data-id="${x.id}" title="Supprimer ce plan" aria-label="Supprimer le plan ${esc(x.nom)}">✕</button></span>`).join("")}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:200px">Nom du plan<input type="text" data-docname="${sel.id}" value="${esc(sel.nom)}"></label><button class="btn" data-act="plan-anno" data-id="${sel.id}">Annoter${(sel.shapes || []).length ? ` (${sel.shapes.length})` : ""}</button><button class="btn" data-act="plan-crop" data-id="${sel.id}">Cadrer</button><button class="btn danger" data-act="doc-del" data-id="${sel.id}">Supprimer ce plan</button></div>
       <div class="plan-stage">${planView(sel, pts, n, { clickable: true, maxVh: 75 })}</div>
       <p class="small muted" style="margin:0">${pts.length ? `${pts.length} point(s) localisé(s) sur ce plan${pv ? ` au PV n°${n}` : ""}. Cliquez sur une pastille pour ouvrir le point.` : "Aucun point localisé sur ce plan. Utilisez « Localiser » sur un point de la réunion."}</p>
