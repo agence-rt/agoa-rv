@@ -1,1 +1,1 @@
-Déploiement n°29 — PV : plans concernés pleine largeur avant l'avancement lot par lot (tous les repères) ; photos et plans : Cadrer (formats, zoom) et Annoter (couleurs)
+Déploiement n°30 — Intervenants : possibilité d'ajouter d'autres personnes pour un même lot (présence, convocation, e-mails du PV)

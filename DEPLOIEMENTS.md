@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°30** — v0.30.0 — 2026-10-30 — Intervenants : possibilité d'ajouter d'autres personnes pour un même lot (présence, convocation, e-mails du PV)
 - **n°29** — v0.29.0 — 2026-10-30 — PV : plans concernés pleine largeur avant l'avancement lot par lot (tous les repères) ; photos et plans : Cadrer (formats, zoom) et Annoter (couleurs)
 - **n°28** — v0.28.0 — 2026-10-30 — Point : possibilité de changer l'intervenant a posteriori (le point est renuméroté dans le bon lot)
 - **n°27** — v0.27.0 — 2026-10-30 — Plans : plusieurs repères par point (pastilles, flèches, rectangles de localisation) ; photos : zoom et recadrage
