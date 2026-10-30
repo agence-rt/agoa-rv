@@ -215,9 +215,29 @@ table.t td.c,table.t th.c{text-align:center;width:90px}
 .ph svg.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .ph .cap{display:block;font-size:12px;padding:4px 6px;line-height:1.3;color:var(--ink-2);text-align:left;background:var(--paper)}
 .pt-plan{display:grid;gap:4px;justify-items:start;border:0;background:transparent;padding:0;cursor:zoom-in;text-align:left;max-width:340px}
-.pt-plan .plan-wrap{border:1px solid var(--rule)}
+.pt-plan .plan-wrap{display:block;width:340px;max-width:100%;border:1px solid var(--rule)}
 .pt-plan .plan-wrap img{max-height:220px}
-.doc figure.ppl{margin:6px 0 4px;width:60%;break-inside:avoid}
+.doc figure.plfull{width:100%;margin:6px 0 12px}
+.pcrop{position:relative;display:block;overflow:hidden;width:100%;line-height:0;background:#fff}
+.pcrop .pin-in{position:absolute;display:block;line-height:0}
+.pcrop img{display:block;width:100%;height:auto;max-width:none!important;max-height:none!important}
+.pcrop svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.pcrop svg .pin{pointer-events:auto}
+.ph-list{display:grid;gap:10px}
+.ph-row{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start}
+.ph-th{display:block;width:120px;border:1px solid var(--rule);border-radius:4px;overflow:hidden;background:#fff;padding:0;cursor:pointer}
+.ph-info{display:grid;gap:8px;min-width:0}
+.ph-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ph-list .ph-add{width:auto;min-height:0;padding:10px;flex-direction:row;justify-self:start}
+.anno-stage.full{display:block;overflow:auto;max-height:72vh;background:#fff;padding:0;border:1px solid var(--rule)}
+.anno-view{position:relative;line-height:0;width:100%}
+.anno-ovl{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.swatches{display:inline-flex;gap:6px;align-items:center}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--rule);cursor:pointer;padding:0}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.crop-frame{position:relative;overflow:hidden;width:100%;max-width:640px;margin:0 auto;background:#ddd;border:1px solid var(--rule);cursor:grab;touch-action:none;user-select:none}
+.crop-frame.grab{cursor:grabbing}
+.crop-frame img{position:absolute;max-width:none;pointer-events:none}
 .ph-wrap{display:flex;flex-direction:column;gap:2px;width:160px}
 .ph-ord{display:flex;align-items:center;justify-content:space-between}
 .ph-ord .btn{padding:2px 8px}
@@ -708,7 +728,7 @@ function genSection(pv, ro) {
 function plansSection(pv) {
   const n = pv.num; const pl = plans();
   if (!pl.length) return "";
-  const blocks = pl.map(x => { const pts = S.points.filter(p => onPlan(p, x.id).length && ["new", "open", "rappel", "urgent", "realise"].includes(ptState(p, n))); return `<div style="display:grid;gap:6px"><div class="small"><b>${esc(x.nom)}</b> — ${pts.length} point(s)</div><div class="plan-stage"><div class="plan-wrap"><img src="${esc(docSrc(x))}" alt="${esc(x.nom)}" loading="lazy">${pinsSVG(x, pts, n, { clickable: true })}</div></div></div>`; }).join("");
+  const blocks = pl.map(x => { const pts = S.points.filter(p => onPlan(p, x.id).length && ["new", "open", "rappel", "urgent", "realise"].includes(ptState(p, n))); return `<div style="display:grid;gap:6px"><div class="small"><b>${esc(x.nom)}</b> — ${pts.length} point(s)</div><div class="plan-stage">${planView(x, pts, n, { clickable: true, maxVh: 75, lazy: true })}</div></div>`; }).join("");
   return `<section class="sec"><div class="sec-h"><h3>Localisation sur plans</h3><button class="btn sm" data-tab="plans">Gérer les plans</button></div><div class="sec-b" style="display:grid;gap:16px">${blocks}<p class="small muted" style="margin:0">Cliquez sur une pastille pour aller au point.</p></div></section>`;
 }
 
@@ -737,8 +757,16 @@ const phKey = ph => ph.ord ?? ph.createdAt ?? 0;
 function photosOf(pid, pvNum) { return S.photos.filter(ph => ph.pointId === pid && (pvNum == null || +ph.pv === +pvNum)).sort((a, b) => phKey(a) - phKey(b) || (a.createdAt || 0) - (b.createdAt || 0)); }
 // Bande de photos (point ou commentaires généraux) : ouverture pour annoter, flèches pour changer l'ordre.
 function photoStrip(pid, phs, ro, alt) {
-  return `<div class="photos">${phs.map((ph, i) => `<div class="ph-wrap"><button class="ph" data-act="ph-open" data-id="${ph.id}" ${ro ? "" : 'title="Annoter la photo"'}><span class="fig"><img src="${esc(phSrc(ph))}" alt="${esc(ph.cap || alt)}" loading="lazy">${shapesSVG(ph)}</span>${ph.cap ? `<span class="cap">${esc(ph.cap)}</span>` : ""}</button>${ro || phs.length < 2 ? "" : `<div class="ph-ord"><button class="btn ghost sm" data-act="ph-move" data-id="${ph.id}" data-dir="-1" ${i ? "" : "disabled"} title="Déplacer avant" aria-label="Déplacer la photo avant">◀</button><span class="small muted">${i + 1}/${phs.length}</span><button class="btn ghost sm" data-act="ph-move" data-id="${ph.id}" data-dir="1" ${i < phs.length - 1 ? "" : "disabled"} title="Déplacer après" aria-label="Déplacer la photo après">▶</button></div>`}</div>`).join("")}
+  return `<div class="ph-list">${phs.map((ph, i) => `<div class="ph-row"><button class="ph-th" data-act="${ro ? "ph-open" : "ph-anno"}" data-id="${ph.id}" title="${ro ? "Voir la photo" : "Annoter la photo"}">${phView(ph, { alt: ph.cap || alt, lazy: true })}</button>
+    <div class="ph-info">${ro ? `<div>${esc(ph.cap || "")}</div>` : `<input type="text" data-phcap="${ph.id}" value="${esc(ph.cap || "")}" placeholder="Légende de la photo" aria-label="Légende de la photo">`}
+      ${ro ? "" : `<div class="ph-btns"><button class="btn sm" data-act="ph-anno" data-id="${ph.id}">Annoter${(ph.shapes || []).length ? ` (${ph.shapes.length})` : ""}</button><button class="btn sm" data-act="ph-crop" data-id="${ph.id}">Cadrer</button><button class="btn sm danger" data-act="ph-del" data-id="${ph.id}">Retirer</button>${phs.length < 2 ? "" : `<span class="ph-ord"><button class="btn ghost sm" data-act="ph-move" data-id="${ph.id}" data-dir="-1" ${i ? "" : "disabled"} title="Déplacer avant" aria-label="Déplacer la photo avant">◀</button><span class="small muted">${i + 1}/${phs.length}</span><button class="btn ghost sm" data-act="ph-move" data-id="${ph.id}" data-dir="1" ${i < phs.length - 1 ? "" : "disabled"} title="Déplacer après" aria-label="Déplacer la photo après">▶</button></span>`}</div>`}</div></div>`).join("")}
     ${ro ? "" : `<label class="ph-add">${ICON.cam}Ajouter des photos<input type="file" accept="image/*" multiple hidden data-photos="${pid}"></label>`}</div>`;
+}
+async function delPhoto(id) {
+  const ph = S.photos.find(x => x.id === id); if (!ph) return;
+  if (!await askConfirm("Retirer cette photo ?", "Elle sera retirée du point et de tous les comptes rendus.", "Retirer")) return;
+  if (ph.assetId && CAP.assets) { try { await CAP.assets.delete(ph.assetId); } catch {} }
+  await safe(Store.del(dPath() + "/photos/" + id));
 }
 async function movePhoto(id, dir) {
   const ph = S.photos.find(x => x.id === id); if (!ph) return;
@@ -749,12 +777,18 @@ async function movePhoto(id, dir) {
   scheduleMain();
 }
 const phSrc = (ph) => ph.assetId ? "/_blob/" + ph.assetId : ph.dataUrl;
-function shapesSVG(ph, cls = "ov") {
-  const w = ph.w || 1000, h = ph.h || 750, sw = Math.max(w, h) / 160;
-  const sh = (ph.shapes || []).map(s => shapeMarkup(s, sw)).join("");
-  return `<svg class="${cls}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${sh}</svg>`;
+// Cadrage : la photo (ou le plan) garde son image d'origine ; o.crop = { x, y, w, h } (pixels d'origine) délimite la zone affichée.
+const cropOf = o => (o.crop && o.crop.w > 0 && o.crop.h > 0) ? o.crop : { x: 0, y: 0, w: o.w || 1000, h: o.h || 750 };
+function cropView(o, src, inner, opt = {}) {
+  const c = cropOf(o), W = o.w || c.w;
+  const mw = opt.maxVh ? `max-width:calc(${opt.maxVh}vh * ${c.w / c.h});margin:0 auto;` : "";
+  return `<span class="pcrop" style="${mw}aspect-ratio:${c.w}/${c.h}"><span class="pin-in" style="width:${W / c.w * 100}%;left:${-c.x / c.w * 100}%;top:${-c.y / c.h * 100}%"><img src="${esc(src)}" alt="${esc(opt.alt || "")}"${opt.lazy ? ' loading="lazy"' : ""}>${inner || ""}</span></span>`;
 }
+const shapesInner = o => { const c = cropOf(o), sw = Math.max(c.w, c.h) / 160; return (o.shapes || []).map(s => shapeMarkup(s, sw)).join(""); };
+function shapesSVG(o, cls = "ov") { return `<svg class="${cls}" viewBox="0 0 ${o.w || 1000} ${o.h || 750}" preserveAspectRatio="none" aria-hidden="true">${shapesInner(o)}</svg>`; }
+const phView = (ph, opt = {}) => cropView(ph, phSrc(ph), shapesSVG(ph), opt);
 function shapeMarkup(s, sw, col = "#E10600") {
+  if (s.c) col = s.c;
   if (s.t === "rect") { const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2); return `<rect x="${x}" y="${y}" width="${Math.abs(s.x2 - s.x1)}" height="${Math.abs(s.y2 - s.y1)}" fill="none" stroke="${col}" stroke-width="${sw}"/>`; }
   if (s.t === "ellipse") return `<ellipse cx="${(s.x1 + s.x2) / 2}" cy="${(s.y1 + s.y2) / 2}" rx="${Math.abs(s.x2 - s.x1) / 2}" ry="${Math.abs(s.y2 - s.y1) / 2}" fill="none" stroke="${col}" stroke-width="${sw}"/>`;
   if (s.t === "free") return `<polyline points="${(s.pts || []).map(p => p.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -768,7 +802,7 @@ const plans = () => S.docs.filter(x => x.kind === "plan").sort((a, b) => (a.crea
 const docSrc = (x) => x.assetId ? "/_blob/" + x.assetId : x.dataUrl;
 const STCOL = { realise: "#2E7D32", rappel: "#D9730D", urgent: "#B00020", new: "#25587F", open: "#5A6670" };
 function pinsSVG(plan, pts, n, opts = {}) {
-  const r = Math.max(plan.w, plan.h) / 75;
+  const cr = cropOf(plan); const r = Math.max(cr.w, cr.h) / 75;
   const tagW = label => Math.max(r * 2.1, r * .62 * label.length + r * .9);
   const tagBox = (cx, by, label, p, st, hi) => { const w = tagW(label); return `<rect x="${cx - w / 2}" y="${by - r * 1.7}" width="${w}" height="${r * 1.7}" rx="${r * .35}" fill="${lotColor(p.lot)}" stroke="${hi ? "#111" : STCOL[st]}" stroke-width="${r / (hi ? 3 : 5)}"/>
       <text x="${cx}" y="${by - r * .85}" text-anchor="middle" dominant-baseline="middle" font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="${r * 1.05}" fill="#fff">${esc(label)}</text>`; };
@@ -779,8 +813,9 @@ function pinsSVG(plan, pts, n, opts = {}) {
     if (l.t === "rect") { const x = Math.min(l.x1, l.x2), y = Math.min(l.y1, l.y2); return g(`${shapeMarkup({ ...l, t: "rect" }, r / 3.2, col)}${tagBox(Math.min(plan.w - tagW(label) / 2, x + tagW(label) / 2), Math.max(r * 1.7, y), label, p, st, hi)}`); }
     return g(`<line x1="${l.x}" y1="${l.y}" x2="${l.x}" y2="${l.y - r * 1.6}" stroke="${col}" stroke-width="${r / 4}"/>${tagBox(l.x, l.y - r * 1.0, label, p, st, hi)}<circle cx="${l.x}" cy="${l.y}" r="${r / 3}" fill="${col}"/>`);
   }).join("")).join("");
-  return `<svg class="${opts.cls || "ov"}" viewBox="0 0 ${plan.w} ${plan.h}" preserveAspectRatio="none">${marks}${opts.extra || ""}</svg>`;
+  return `<svg class="${opts.cls || "ov"}" viewBox="0 0 ${plan.w} ${plan.h}" preserveAspectRatio="none">${shapesInner(plan)}${marks}${opts.extra || ""}</svg>`;
 }
+const planView = (plan, pts, n, opt = {}) => cropView(plan, docSrc(plan), pinsSVG(plan, pts, n, opt), { alt: opt.alt || plan.nom, lazy: opt.lazy, maxVh: opt.maxVh });
 
 function pointCard(p, pv, ro) {
   const n = pv.num; const st = ptState(p, n); const col = lotColor(p.lot); const d = D();
@@ -811,7 +846,7 @@ function pointCard(p, pv, ro) {
       ${notes.map(k => `<div class="note-pv small"><span class="muted">PV n°${k} :</span> <span class="rich">${richHtml(p.notes[k])}</span></div>`).join("")}
       ${older ? (ro ? ((p.notes || {})[n] ? `<div class="note-pv"><span class="muted small">Cette réunion :</span> <span class="rich">${richHtml(p.notes[n])}</span></div>` : "") : rte(`data-note="${p.id}"`, (p.notes || {})[n] || "", "Observation de cette réunion (facultatif)")) : ""}
       ${(phs.length || !ro) ? photoStrip(p.id, phs, ro, "Photo du point " + p.num) : ""}
-      ${lpl.map(plan => `<button class="pt-plan" data-act="pin-view" data-id="${p.id}" data-plan="${plan.id}" title="Agrandir le plan"><span class="plan-wrap"><img src="${esc(docSrc(plan))}" alt="Plan ${esc(plan.nom)}" loading="lazy">${pinsSVG(plan, [p], n, { hi: p.id })}</span><span class="small muted">Localisation : ${esc(plan.nom)}</span></button>`).join("")}
+      ${lpl.map(plan => `<button class="pt-plan" data-act="pin-view" data-id="${p.id}" data-plan="${plan.id}" title="Agrandir le plan"><span class="plan-wrap">${planView(plan, [p], n, { hi: p.id, lazy: true })}</span><span class="small muted">Localisation : ${esc(plan.nom)}</span></button>`).join("")}
       <div class="hist">${esc(hist)}${prev ? ` · dernier statut : ${prev === "urgent" ? "rappel urgent" : "rappel"}` : ""}</div>
     </div>
     ${older && !ro ? `<div class="decide"><span class="lbl">Suite donnée :</span>
@@ -878,8 +913,8 @@ function viewPlans(d) {
     <div class="sec-h"><h3>Plans</h3><label class="btn primary">${ICON.plus}Ajouter un plan<input type="file" hidden accept="${accept}" data-upload="plan"></label></div>
     ${pl.length ? `<div class="sec-b" style="display:grid;gap:12px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${pl.map(x => `<button class="btn sm ${x.id === sel.id ? "primary" : ""}" data-act="plan-sel" data-id="${x.id}">${esc(x.nom)}</button>`).join("")}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:200px">Nom du plan<input type="text" data-docname="${sel.id}" value="${esc(sel.nom)}"></label><button class="btn danger" data-act="doc-del" data-id="${sel.id}">Supprimer ce plan</button></div>
-      <div class="plan-stage"><div class="plan-wrap"><img src="${esc(docSrc(sel))}" alt="${esc(sel.nom)}">${pinsSVG(sel, pts, n, { clickable: true })}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:200px">Nom du plan<input type="text" data-docname="${sel.id}" value="${esc(sel.nom)}"></label><button class="btn" data-act="plan-anno" data-id="${sel.id}">Annoter${(sel.shapes || []).length ? ` (${sel.shapes.length})` : ""}</button><button class="btn" data-act="plan-crop" data-id="${sel.id}">Cadrer</button><button class="btn danger" data-act="doc-del" data-id="${sel.id}">Supprimer ce plan</button></div>
+      <div class="plan-stage">${planView(sel, pts, n, { clickable: true, maxVh: 75 })}</div>
       <p class="small muted" style="margin:0">${pts.length ? `${pts.length} point(s) localisé(s) sur ce plan${pv ? ` au PV n°${n}` : ""}. Cliquez sur une pastille pour ouvrir le point.` : "Aucun point localisé sur ce plan. Utilisez « Localiser » sur un point de la réunion."}</p>
     </div>` : `<div class="sec-b muted">Importez vos plans (image ou PDF : vous choisissez les pages à importer) pour y placer les points avec des pastilles numérotées. Les plans localisés apparaissent dans le compte rendu.</div>`}
   </section>
@@ -1008,7 +1043,7 @@ function openPinner(pointId, viewOnly, opt = {}) {
           <button class="btn sm" data-undo ${here.length ? "" : "disabled"}>Annuler le dernier repère</button>
           <span class="small muted">${tool === "pin" ? "Cliquez sur le plan pour poser une pastille." : "Glissez sur le plan pour tracer."} Vous pouvez poser plusieurs repères ; les autres points apparaissent en transparence.</span></div>`}
         ${here.length && !viewOnly ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${here.map(o => `<span class="chip">${LBL[o.l.t] || "Repère"} <button class="btn ghost sm" data-delloc="${o.i}" title="Supprimer ce repère" aria-label="Supprimer ce repère" style="padding:0 4px">✕</button></span>`).join("")}</div>` : ""}
-        <div class="anno-stage"><div class="anno-wrap plan-pick"><img src="${esc(docSrc(plan))}" alt="${esc(plan.nom)}">${pinsSVG(plan, others.concat(mine), n, { hi: p.id, extra: '<g data-draft></g>' })}</div></div>
+        <div class="anno-stage full"><div class="anno-view plan-pick">${planView(plan, others.concat(mine), n, { hi: p.id })}${viewOnly ? "" : `<svg class="anno-ovl" viewBox="${cropOf(plan).x} ${cropOf(plan).y} ${cropOf(plan).w} ${cropOf(plan).h}" preserveAspectRatio="none"><g data-draft></g></svg>`}</div></div>
       </div>
       <div class="modal-f">${viewOnly ? `<button class="btn" data-x>Fermer</button>` : `${locs.length ? `<button class="btn danger" data-unpin>Retirer tous les repères</button><span style="flex:1"></span>` : ""}<button class="btn" data-x>Annuler</button><button class="btn primary" data-save ${locs.length || locsOf(p).length ? "" : "disabled"}>Enregistrer</button>`}</div></div></div>`;
     L.querySelectorAll("[data-x]").forEach(b => b.onclick = close);
@@ -1018,9 +1053,9 @@ function openPinner(pointId, viewOnly, opt = {}) {
       L.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { tool = b.dataset.tool; draw(); });
       L.querySelector("[data-undo]")?.addEventListener("click", () => { const last = here[here.length - 1]; if (last) { locs.splice(last.i, 1); draw(); } });
       L.querySelectorAll("[data-delloc]").forEach(b => b.onclick = () => { locs.splice(+b.dataset.delloc, 1); draw(); });
-      const svg = L.querySelector(".plan-pick svg"); svg.style.touchAction = "none"; svg.style.cursor = "crosshair";
-      const r0 = Math.max(plan.w, plan.h) / 75;
-      const pt = ev => { const r = svg.getBoundingClientRect(); return { x: Math.round(Math.max(0, Math.min(plan.w, (ev.clientX - r.left) / r.width * plan.w))), y: Math.round(Math.max(0, Math.min(plan.h, (ev.clientY - r.top) / r.height * plan.h))) }; };
+      const svg = L.querySelector(".anno-ovl"); const cr = cropOf(plan);
+      const r0 = Math.max(cr.w, cr.h) / 75;
+      const pt = ev => { const r = svg.getBoundingClientRect(); return { x: Math.round(Math.max(cr.x, Math.min(cr.x + cr.w, cr.x + (ev.clientX - r.left) / r.width * cr.w))), y: Math.round(Math.max(cr.y, Math.min(cr.y + cr.h, cr.y + (ev.clientY - r.top) / r.height * cr.h))) }; };
       const g = svg.querySelector("[data-draft]"); let a0 = null;
       const col = "#25587F";
       svg.addEventListener("pointerdown", ev => { a0 = pt(ev); svg.setPointerCapture(ev.pointerId); });
@@ -1182,7 +1217,12 @@ async function onMainClick(e) {
     "pt-save": () => savePoint(t.closest(".pform")),
     "pt-del": () => delPoint(t.dataset.id),
     "pt-decide": () => decide(t.dataset.id, t.dataset.v),
-    "ph-open": () => openAnno(t.dataset.id, curPv()?.statut === "diffuse"),
+    "ph-open": () => openAnno(t.dataset.id, true),
+    "ph-anno": () => openAnno(t.dataset.id, false),
+    "ph-crop": () => openCrop(t.dataset.id),
+    "ph-del": () => delPhoto(t.dataset.id),
+    "plan-anno": () => openAnno(t.dataset.id, false, "plan"),
+    "plan-crop": () => openCrop(t.dataset.id, "plan"),
     "ph-move": () => movePhoto(t.dataset.id, +t.dataset.dir),
     "int-add": () => addInt(),
     "int-del": () => delInt(t.dataset.id),
@@ -1216,6 +1256,7 @@ async function onMainChange(e) {
   if (ds.pres) { const [iid, k] = ds.pres.split(":"); const i = (d.intervenants || []).find(x => x.id === iid); const base = (pv.presence || {})[iid] || { c: i?.convoque !== false, p: false, n: i?.convoque !== false }; return updPv(pv, { presence: { ...(pv.presence || {}), [iid]: { ...base, [k]: t.checked } } }); }
   if (ds.note) { const p = S.points.find(x => x.id === ds.note); return safe(Store.update(dPath() + "/points/" + p.id, { notes: { ...(p.notes || {}), [pv.num]: t.value } })); }
   if (ds.upload) { const files = [...t.files]; t.value = ""; for (const f of files) await (ds.upload === "plan" ? uploadPlan(f) : uploadDoc(f)); return; }
+  if (ds.phcap) { const x = S.photos.find(y => y.id === ds.phcap); if (x) { x.cap = t.value.trim(); return safe(Store.update(dPath() + "/photos/" + x.id, { cap: x.cap })); } return; }
   if (ds.docname) { const x = S.docs.find(y => y.id === ds.docname); const v = t.value.trim(); if (x && v) { x.nom = v; return safe(Store.update(dPath() + "/docs/" + x.id, { nom: v })); } return; }
   if (ds.todo) { const [pid, tid] = ds.todo.split(":"); const p = S.points.find(x => x.id === pid); return setTodo(pid, (p.todo || []).map(x => x.id === tid ? { ...x, done: t.checked } : x)); }
   if (ds.photos) { const files = [...t.files]; t.value = ""; return addPhotos(ds.photos, files); }
@@ -1419,85 +1460,91 @@ async function addPhotos(pointId, files) {
 }
 
 /* ---------------- annotation ---------------- */
-function openAnno(phId, ro) {
-  const ph = S.photos.find(x => x.id === phId); if (!ph) return;
-  const st = { shapes: JSON.parse(JSON.stringify(ph.shapes || [])), tool: ro ? "" : "arrow", draft: null, crop: null, canvas: null, w: ph.w, h: ph.h, zoom: 1 };
+// Cibles des outils d'image : photo (S.photos) ou plan (S.docs).
+const imgTarget = (kind, id) => kind === "plan" ? { o: S.docs.find(x => x.id === id), col: "docs", src: docSrc } : { o: S.photos.find(x => x.id === id), col: "photos", src: phSrc };
+const ANNO_COLORS = [["#E10600", "Rouge"], ["#F28C00", "Orange"], ["#F5C400", "Jaune"], ["#2E9E3E", "Vert"], ["#1E7FE0", "Bleu"], ["#1B1B1B", "Noir"]];
+function openAnno(id, ro, kind = "photo") {
+  const T = imgTarget(kind, id); const o = T.o; if (!o) return;
+  const c = cropOf(o); const sw = Math.max(c.w, c.h) / 160;
+  const st = { shapes: JSON.parse(JSON.stringify(o.shapes || [])), tool: "arrow", color: ANNO_COLORS[0][0], draft: null };
   const L = $("#layer");
-  const TOOLS = [["arrow", "Flèche"], ["rect", "Cadre"], ["ellipse", "Cercle"], ["free", "Main levée"], ["text", "Texte"], ["crop", "Recadrer"]];
-  L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true" aria-label="Annoter la photo"><div class="modal wide">
-    <div class="modal-h"><h3>${ro ? "Photo" : "Annoter la photo"}</h3><button class="btn ghost" data-x>Fermer</button></div>
+  const TOOLS = [["arrow", "Flèche"], ["rect", "Carré"], ["ellipse", "Cercle"], ["free", "Main levée"], ["text", "Texte"]];
+  const title = kind === "plan" ? "Annoter le plan" : "Annoter l'image";
+  L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true" aria-label="${title}"><div class="modal wide">
+    <div class="modal-h"><h3>${ro ? (kind === "plan" ? "Plan" : "Photo") : title}</h3><button class="btn ghost" data-x>Fermer</button></div>
     <div class="modal-b">
       ${ro ? "" : `<div class="toolbar"><div class="seg" role="group" aria-label="Outil">${TOOLS.map(([k, l], i) => `<button data-tool="${k}" aria-pressed="${i === 0}">${l}</button>`).join("")}</div>
+        <span class="swatches" role="group" aria-label="Couleur">${ANNO_COLORS.map(([h, l], i) => `<button class="sw" data-color="${h}" title="${l}" aria-label="${l}" aria-pressed="${i === 0}" style="background:${h}"></button>`).join("")}</span>
         <input type="text" data-txt placeholder="Texte à placer" style="width:200px" hidden>
-        <button class="btn sm primary" data-crop-ok hidden>Appliquer le recadrage</button>
-        <button class="btn sm" data-undo>Annuler le dernier tracé</button><button class="btn sm" data-clear>Tout effacer</button><span class="small muted" data-help>Glissez sur la photo pour tracer en rouge.</span></div>`}
-      <div class="toolbar" style="margin-top:-2px"><div class="seg" role="group" aria-label="Zoom"><button data-zoom="-1" title="Dézoomer" aria-label="Dézoomer">−</button><button data-zoom="0" title="Ajuster à la fenêtre">Ajuster</button><button data-zoom="1" title="Zoomer" aria-label="Zoomer">+</button></div><span class="small muted" data-zlbl>100 %</span><span class="small muted">Ctrl + molette pour zoomer ; faites défiler pour vous déplacer.</span></div>
-      <div class="anno-stage zoomable"><div class="anno-wrap"><img src="${esc(phSrc(ph))}" alt=""><svg viewBox="0 0 ${ph.w} ${ph.h}" preserveAspectRatio="none"></svg></div></div>
-      <label class="f">Légende<input type="text" data-cap value="${esc(ph.cap || "")}" ${ro ? "disabled" : ""} placeholder="Ex. Éclat sur le montant de la menuiserie M23"></label>
+        <button class="btn sm" data-undo>Annuler le dernier</button><button class="btn sm" data-clear>Tout effacer</button></div>
+        <div class="small muted" data-help>Cliquez-glissez sur l'image pour tracer une flèche ou un carré.</div>`}
+      <div class="anno-stage full"><div class="anno-view">${cropView(o, T.src(o), "", { alt: "" })}<svg class="anno-ovl" viewBox="${c.x} ${c.y} ${c.w} ${c.h}" preserveAspectRatio="none" ${ro ? 'style="cursor:default"' : ""}></svg></div></div>
     </div>
-    <div class="modal-f">${ro ? "" : `<button class="btn danger" data-del>Supprimer la photo</button><span style="flex:1"></span>`}<button class="btn" data-x>${ro ? "Fermer" : "Annuler"}</button>${ro ? "" : `<button class="btn primary" data-save>Enregistrer</button>`}</div>
+    <div class="modal-f"><span style="flex:1"></span><button class="btn" data-x>${ro ? "Fermer" : "Annuler"}</button>${ro ? "" : `<button class="btn primary" data-save>Valider</button>`}</div>
   </div></div>`;
-  const svg = L.querySelector(".anno-wrap svg"); const wrap = L.querySelector(".anno-wrap"); const img = wrap.querySelector("img"); const stage = L.querySelector(".anno-stage");
-  const txt = L.querySelector("[data-txt]"), help = L.querySelector("[data-help]"), cropOk = L.querySelector("[data-crop-ok]");
-  let base = 0; const sw = () => Math.max(st.w, st.h) / 160;
-  const draw = () => {
-    svg.setAttribute("viewBox", `0 0 ${st.w} ${st.h}`);
-    let h = st.shapes.concat(st.draft && st.draft.t !== "crop" ? [st.draft] : []).map(s => shapeMarkup(s, sw())).join("");
-    const c = st.draft && st.draft.t === "crop" ? st.draft : st.crop;
-    if (c) { const x = Math.min(c.x1, c.x2), y = Math.min(c.y1, c.y2), w = Math.abs(c.x2 - c.x1), hh = Math.abs(c.y2 - c.y1); h += `<path fill-rule="evenodd" fill="rgba(0,0,0,.55)" d="M0 0H${st.w}V${st.h}H0Z M${x} ${y}h${w}v${hh}h${-w}Z"/><rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="none" stroke="#fff" stroke-width="${sw() / 1.5}" stroke-dasharray="${sw() * 3} ${sw() * 2}"/>`; }
-    svg.innerHTML = h; if (cropOk) cropOk.hidden = !st.crop;
-  };
-  const applyZoom = () => { if (!base) base = img.clientWidth || 600; wrap.style.width = Math.round(base * st.zoom) + "px"; wrap.style.maxWidth = "none"; img.style.maxHeight = "none"; img.style.width = "100%"; L.querySelector("[data-zlbl]").textContent = Math.round(st.zoom * 100) + " %"; };
-  const setZoom = z => { const old = st.zoom; st.zoom = Math.max(.5, Math.min(6, z)); const fx = (stage.scrollLeft + stage.clientWidth / 2) / (wrap.offsetWidth || 1), fy = (stage.scrollTop + stage.clientHeight / 2) / (wrap.offsetHeight || 1); if (st.zoom === 1 && old === 1) return; applyZoom(); stage.scrollLeft = fx * wrap.offsetWidth - stage.clientWidth / 2; stage.scrollTop = fy * wrap.offsetHeight - stage.clientHeight / 2; };
-  const fit = () => { base = 0; wrap.style.width = ""; wrap.style.maxWidth = ""; img.style.maxHeight = ""; img.style.width = ""; st.zoom = 1; requestAnimationFrame(() => { base = img.clientWidth; L.querySelector("[data-zlbl]").textContent = "100 %"; }); };
-  if (img.complete) fit(); else img.addEventListener("load", fit, { once: true });
-  L.querySelectorAll("[data-zoom]").forEach(b => b.onclick = () => { const v = +b.dataset.zoom; if (!v) { st.zoom = 1; fit(); stage.scrollLeft = stage.scrollTop = 0; } else setZoom(st.zoom * (v > 0 ? 1.4 : 1 / 1.4)); });
-  stage.addEventListener("wheel", ev => { if (!ev.ctrlKey) return; ev.preventDefault(); setZoom(st.zoom * (ev.deltaY < 0 ? 1.15 : 1 / 1.15)); }, { passive: false });
+  const svg = L.querySelector(".anno-ovl"); const txt = L.querySelector("[data-txt]"), help = L.querySelector("[data-help]");
+  const draw = () => { svg.innerHTML = st.shapes.concat(st.draft ? [st.draft] : []).map(x => shapeMarkup(x, sw)).join(""); };
   draw();
-  const pt = ev => { const r = svg.getBoundingClientRect(); return { x: Math.round(Math.max(0, Math.min(st.w, (ev.clientX - r.left) / r.width * st.w))), y: Math.round(Math.max(0, Math.min(st.h, (ev.clientY - r.top) / r.height * st.h))) }; };
+  const pt = ev => { const r = svg.getBoundingClientRect(); return { x: Math.round(Math.max(c.x, Math.min(c.x + c.w, c.x + (ev.clientX - r.left) / r.width * c.w))), y: Math.round(Math.max(c.y, Math.min(c.y + c.h, c.y + (ev.clientY - r.top) / r.height * c.h))) }; };
   if (!ro) {
     svg.addEventListener("pointerdown", ev => {
       const p = pt(ev);
-      if (st.tool === "text") { const t = txt.value.trim(); if (!t) { txt.focus(); toast("Saisissez d'abord le texte à placer"); return; } st.shapes.push({ t: "text", x1: p.x, y1: p.y, txt: t }); draw(); return; }
+      if (st.tool === "text") { const t = txt.value.trim(); if (!t) { txt.focus(); toast("Saisissez d'abord le texte à placer"); return; } st.shapes.push({ t: "text", x1: p.x, y1: p.y, txt: t, c: st.color }); draw(); return; }
       svg.setPointerCapture(ev.pointerId);
-      st.draft = st.tool === "free" ? { t: "free", pts: [[p.x, p.y]] } : { t: st.tool, x1: p.x, y1: p.y, x2: p.x, y2: p.y }; if (st.tool === "crop") st.crop = null; draw();
+      st.draft = st.tool === "free" ? { t: "free", pts: [[p.x, p.y]], c: st.color } : { t: st.tool, x1: p.x, y1: p.y, x2: p.x, y2: p.y, c: st.color }; draw();
     });
-    svg.addEventListener("pointermove", ev => { if (!st.draft) return; const p = pt(ev); if (st.draft.t === "free") { const l = st.draft.pts[st.draft.pts.length - 1]; if (Math.hypot(p.x - l[0], p.y - l[1]) > sw() / 2) st.draft.pts.push([p.x, p.y]); } else { st.draft.x2 = p.x; st.draft.y2 = p.y; } draw(); });
-    const end = () => { if (!st.draft) return; const s = st.draft; st.draft = null; if (s.t === "crop") { if (Math.abs(s.x2 - s.x1) > st.w * .05 && Math.abs(s.y2 - s.y1) > st.h * .05) st.crop = s; } else if (s.t === "free" ? s.pts.length > 2 : Math.hypot(s.x2 - s.x1, s.y2 - s.y1) > sw() * 2) st.shapes.push(s); draw(); };
+    svg.addEventListener("pointermove", ev => { if (!st.draft) return; const p = pt(ev); if (st.draft.t === "free") { const l = st.draft.pts[st.draft.pts.length - 1]; if (Math.hypot(p.x - l[0], p.y - l[1]) > sw / 2) st.draft.pts.push([p.x, p.y]); } else { st.draft.x2 = p.x; st.draft.y2 = p.y; } draw(); });
+    const end = () => { if (!st.draft) return; const x = st.draft; st.draft = null; if (x.t === "free" ? x.pts.length > 2 : Math.hypot(x.x2 - x.x1, x.y2 - x.y1) > sw * 2) st.shapes.push(x); draw(); };
     svg.addEventListener("pointerup", end); svg.addEventListener("pointercancel", end);
   }
-  // Recadrage : la zone choisie devient l'image ; les tracés suivent le décalage.
-  const applyCrop = () => {
-    const c = st.crop; if (!c) return;
-    const x = Math.round(Math.min(c.x1, c.x2)), y = Math.round(Math.min(c.y1, c.y2)), w = Math.round(Math.abs(c.x2 - c.x1)), h = Math.round(Math.abs(c.y2 - c.y1));
-    const src = st.canvas || img; const k = (src.naturalWidth || src.width) / st.w;
-    const cv = document.createElement("canvas"); cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
-    cv.getContext("2d").drawImage(src, x * k, y * k, w * k, h * k, 0, 0, cv.width, cv.height);
-    const mv = s => { const o = { ...s }; for (const [a, b] of [["x1", x], ["x2", x], ["y1", y], ["y2", y]]) if (o[a] != null) o[a] -= b; if (o.pts) o.pts = o.pts.map(q => [q[0] - x, q[1] - y]); return o; };
-    st.shapes = st.shapes.map(mv); st.canvas = cv; st.w = w; st.h = h; st.crop = null; st.draft = null;
-    img.src = cv.toDataURL("image/jpeg", .92); st.tool = "arrow";
-    L.querySelectorAll("[data-tool]").forEach(x => x.setAttribute("aria-pressed", x.dataset.tool === "arrow")); help.textContent = "Photo recadrée. Enregistrez pour conserver le recadrage."; txt.hidden = true;
-    img.addEventListener("load", () => { fit(); draw(); }, { once: true });
-  };
-  cropOk?.addEventListener("click", applyCrop);
   const close = () => { L.innerHTML = ""; };
   L.querySelectorAll("[data-x]").forEach(b => b.onclick = close);
-  L.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { st.tool = b.dataset.tool; st.crop = st.tool === "crop" ? st.crop : null; L.querySelectorAll("[data-tool]").forEach(x => x.setAttribute("aria-pressed", x === b)); txt.hidden = st.tool !== "text"; help.textContent = st.tool === "text" ? "Saisissez le texte puis cliquez sur la photo pour le placer." : st.tool === "crop" ? "Glissez pour entourer la zone à conserver, puis « Appliquer le recadrage »." : "Glissez sur la photo pour tracer en rouge."; if (st.tool === "text") txt.focus(); draw(); });
+  L.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { st.tool = b.dataset.tool; L.querySelectorAll("[data-tool]").forEach(x => x.setAttribute("aria-pressed", x === b)); txt.hidden = st.tool !== "text"; help.textContent = st.tool === "text" ? "Saisissez le texte puis cliquez sur l'image pour le placer." : st.tool === "free" ? "Cliquez-glissez sur l'image pour dessiner à main levée." : `Cliquez-glissez sur l'image pour tracer ${st.tool === "arrow" ? "une flèche" : st.tool === "rect" ? "un carré" : "un cercle"}.`; if (st.tool === "text") txt.focus(); });
+  L.querySelectorAll("[data-color]").forEach(b => b.onclick = () => { st.color = b.dataset.color; L.querySelectorAll("[data-color]").forEach(x => x.setAttribute("aria-pressed", x === b)); });
   L.querySelector("[data-undo]")?.addEventListener("click", () => { st.shapes.pop(); draw(); });
   L.querySelector("[data-clear]")?.addEventListener("click", () => { st.shapes = []; draw(); });
-  L.querySelector("[data-save]")?.addEventListener("click", async () => {
-    const cap = L.querySelector("[data-cap]").value.trim(); const patch = { shapes: st.shapes, cap };
-    if (st.canvas) {
-      try {
-        if (CAP.assets) { const blob = await new Promise(r => st.canvas.toBlob(r, "image/jpeg", .88)); const up = await CAP.assets.upload(blob, { type: "image/jpeg" }); const old = ph.assetId; patch.assetId = up.id; patch.dataUrl = null; if (old) { try { await CAP.assets.delete(old); } catch {} } }
-        else { let q = .85, url; do { url = st.canvas.toDataURL("image/jpeg", q); q -= .1; } while (url.length > LIM && q > .2); patch.dataUrl = url; }
-        patch.w = st.w; patch.h = st.h;
-      } catch (e) { toast("Recadrage non enregistré : " + (e.code || e.message || "erreur"), 4500); return; }
-    }
-    close(); Object.assign(ph, patch); renderMain(); await safe(Store.update(dPath() + "/photos/" + ph.id, patch));
-  });
-  L.querySelector("[data-del]")?.addEventListener("click", async () => { if (!await askConfirm("Supprimer cette photo ?", "Elle sera retirée du point et de tous les comptes rendus.", "Supprimer")) return; close(); if (ph.assetId && CAP.assets) { try { await CAP.assets.delete(ph.assetId); } catch {} } await safe(Store.del(dPath() + "/photos/" + ph.id)); });
+  L.querySelector("[data-save]")?.addEventListener("click", async () => { close(); o.shapes = st.shapes; renderMain(); await safe(Store.update(dPath() + "/" + T.col + "/" + o.id, { shapes: st.shapes })); });
   L.querySelector(".ov-bg").addEventListener("keydown", ev => { if (ev.key === "Escape") close(); });
+}
+
+// Cadrer : choix d'un format, déplacement de l'image dans le cadre et zoom (comme dans AGOA CCTP). L'image d'origine est conservée.
+function openCrop(id, kind = "photo") {
+  const T = imgTarget(kind, id); const o = T.o; if (!o || !o.w || !o.h) return;
+  const FM = [["4:3", 4 / 3], ["3:2", 3 / 2], ["16:9", 16 / 9], ["Carré", 1], ["Portrait 3:4", 3 / 4]];
+  let fmt = 0; try { const v = localStorage.getItem("agoa.cropFmt"); if (v != null && FM[+v]) fmt = +v; } catch {}
+  const had = !!(o.crop && o.crop.w > 0); const c0 = cropOf(o);
+  let ratio = had ? c0.w / c0.h : FM[fmt][1]; if (had) fmt = FM.findIndex(f => Math.abs(f[1] - ratio) < .02);
+  const st = { z: 1, x0: 0, y0: 0 };
+  const base = () => { const vw1 = Math.min(o.w, o.h * ratio); return { vw1, vh1: vw1 / ratio }; };
+  const dims = () => { const b = base(); return { vw: b.vw1 / st.z, vh: b.vh1 / st.z }; };
+  const clamp = () => { const d = dims(); st.x0 = Math.max(0, Math.min(o.w - d.vw, st.x0)); st.y0 = Math.max(0, Math.min(o.h - d.vh, st.y0)); };
+  if (had) { st.z = Math.max(1, Math.min(6, base().vw1 / c0.w)); st.x0 = c0.x; st.y0 = c0.y; } else { const d = dims(); st.x0 = (o.w - d.vw) / 2; st.y0 = (o.h - d.vh) / 2; }
+  const L = $("#layer");
+  L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true" aria-label="Cadrer l'image"><div class="modal">
+    <div class="modal-h"><h3>${kind === "plan" ? "Cadrer le plan" : "Cadrer l'image"}</h3></div>
+    <div class="modal-b">
+      <div class="toolbar"><span class="small">Format :</span>${FM.map(([l], i) => `<button class="btn sm" data-fmt="${i}" aria-pressed="${i === fmt}">${l}</button>`).join("")}<label class="small" style="display:flex;gap:8px;align-items:center;margin-left:8px">Zoom <input type="range" min="1" max="6" step="0.01" value="1" data-zoom style="width:200px"></label></div>
+      <div class="small muted">Glissez l'image pour la déplacer dans le cadre, utilisez le zoom ou la molette pour l'agrandir. Toutes les images au même format gardent ainsi la même taille.</div>
+      <div class="crop-frame" data-frame><img src="${esc(T.src(o))}" alt="" draggable="false"></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-full>Image complète</button><span style="flex:1"></span><button class="btn" data-x>Annuler</button><button class="btn primary" data-ok>Valider</button></div>
+  </div></div>`;
+  const frame = L.querySelector("[data-frame]"), img = frame.querySelector("img"), zoom = L.querySelector("[data-zoom]");
+  const update = () => { clamp(); frame.style.aspectRatio = String(ratio); const d = dims(); const sc = frame.clientWidth / d.vw; img.style.width = o.w * sc + "px"; img.style.left = -st.x0 * sc + "px"; img.style.top = -st.y0 * sc + "px"; zoom.value = st.z; L.querySelectorAll("[data-fmt]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.fmt === fmt)); };
+  const setZoom = z => { const d = dims(); const cx = st.x0 + d.vw / 2, cy = st.y0 + d.vh / 2; st.z = Math.max(1, Math.min(6, z)); const d2 = dims(); st.x0 = cx - d2.vw / 2; st.y0 = cy - d2.vh / 2; update(); };
+  zoom.oninput = () => setZoom(+zoom.value);
+  frame.addEventListener("wheel", ev => { ev.preventDefault(); setZoom(st.z * (ev.deltaY < 0 ? 1.1 : 1 / 1.1)); }, { passive: false });
+  let drag = null;
+  frame.addEventListener("pointerdown", ev => { drag = { x: ev.clientX, y: ev.clientY, x0: st.x0, y0: st.y0 }; frame.setPointerCapture(ev.pointerId); frame.classList.add("grab"); });
+  frame.addEventListener("pointermove", ev => { if (!drag) return; const sc = frame.clientWidth / dims().vw; st.x0 = drag.x0 - (ev.clientX - drag.x) / sc; st.y0 = drag.y0 - (ev.clientY - drag.y) / sc; update(); });
+  const up = () => { drag = null; frame.classList.remove("grab"); }; frame.addEventListener("pointerup", up); frame.addEventListener("pointercancel", up);
+  L.querySelectorAll("[data-fmt]").forEach(b => b.onclick = () => { const d = dims(); const cx = st.x0 + d.vw / 2, cy = st.y0 + d.vh / 2; fmt = +b.dataset.fmt; ratio = FM[fmt][1]; try { localStorage.setItem("agoa.cropFmt", String(fmt)); } catch {} const d2 = dims(); st.x0 = cx - d2.vw / 2; st.y0 = cy - d2.vh / 2; update(); });
+  const close = () => { L.innerHTML = ""; }; L.querySelector("[data-x]").onclick = close;
+  const save = async crop => { close(); o.crop = crop; renderMain(); await safe(Store.update(dPath() + "/" + T.col + "/" + o.id, { crop })); };
+  L.querySelector("[data-full]").onclick = () => save(null);
+  L.querySelector("[data-ok]").onclick = () => { const d = dims(); save({ x: Math.round(st.x0), y: Math.round(st.y0), w: Math.round(d.vw), h: Math.round(d.vh) }); };
+  L.querySelector(".ov-bg").addEventListener("keydown", ev => { if (ev.key === "Escape") close(); });
+  img.addEventListener("load", update); update();
 }
 
 /* ---------------- dialogs ---------------- */
@@ -2017,13 +2064,11 @@ function docHTML(pv, R = REP_DEFAULT) {
     if (st === "realise") return `<div class="dp s-realise"><div class="h"><span class="pnum" style="background:${lotColor(p.lot)}">${esc(p.num)}</span><b>${esc(p.titre)}</b>${tag}</div></div>`;
     const phs = R.photos ? photosOf(p.id) : []; const note = (p.notes || {})[n];
     const also = (p.also || []).map(id => byId[id]).filter(Boolean);
-    const lplans = R.plans ? locPlanIds(p).map(id => S.docs.find(x => x.id === id)) : [];
     return `<div class="dp s-${st}"><div class="h"><span class="pnum" style="background:${lotColor(p.lot)}">${esc(p.num)}</span><b>${esc(p.titre)}</b>${tag}${due}</div>
       ${also.length ? `<div style="font-size:11px;color:#555">Concerne aussi : ${also.map(i => `lot ${esc(i.lot)} ${esc(i.nom)}`).join(", ")}</div>` : ""}
       ${p.texte ? `<div class="tx rich">${richHtml(p.texte)}</div>` : ""}${note ? `<div class="tx rich"><i>${esc(fmt(pv.date))} :</i> ${richHtml(note)}</div>` : ""}
       ${(p.todo || []).length ? `<div class="td">${p.todo.map(t => `<div>${box(t.done)} ${esc(t.t)}</div>`).join("")}</div>` : ""}
-      ${phs.length ? `<div class="phs r${R.perRow}">${phs.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
-      ${lplans.map(plan => `<figure class="pl ppl"><div class="fig"><img src="${esc(docSrc(plan))}" alt="">${pinsSVG(plan, [p], n, { cls: "" })}</div><figcaption>Localisation : ${esc(plan.nom)}</figcaption></figure>`).join("")}</div>`;
+      ${phs.length ? `<div class="phs r${R.perRow}">${phs.map(ph => `<figure><div class="fig">${phView(ph)}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}</div>`;
   };
   const genPts = S.points.filter(p => p.intId === "gen" && visible(p) || (p.intId === "gen" && only && ptState(p, n) && (R.realises || ptState(p, n) !== "realise"))).sort((x, y) => x.seq - y.seq);
   const genCur = genPts.filter(p => !["past", "realise"].includes(ptState(p, n))), genPast = [...genPts.filter(p => ptState(p, n) === "past"), ...genPts.filter(p => ptState(p, n) === "realise")];
@@ -2054,8 +2099,9 @@ function docHTML(pv, R = REP_DEFAULT) {
     <h2>Prochaine réunion</h2>
     ${nextTxt ? `<p><span class="hl">${nextTxt}</span></p>` : ""}${d.reunionTexte ? `<p><span class="hl">${esc(d.reunionTexte)}</span></p>` : ""}
     <p>${esc(d.diffusion ?? DIFFUSION)}</p>
-    ${(() => { const gp = R.photos ? photosOf("gen", pv.num) : []; return genCur.length || genPast.length || pv.commentaires || gp.length ? `<h2>Commentaires généraux</h2>${genCur.map(pt).join("")}${genPast.length ? `<div class="past-h">Commentaires traités</div>${genPast.map(pt).join("")}` : ""}${pv.commentaires ? `<div class="rich" style="margin-top:6px">${richHtml(pv.commentaires)}</div>` : ""}${gp.length ? `<div style="font-size:11px;color:#444;margin-top:8px">Photos d'avancement du chantier</div><div class="phs r${R.perRow}">${gp.map(ph => `<figure><div class="fig"><img src="${esc(phSrc(ph))}" alt="">${shapesSVG(ph, "")}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}` : ""; })()}
+    ${(() => { const gp = R.photos ? photosOf("gen", pv.num) : []; return genCur.length || genPast.length || pv.commentaires || gp.length ? `<h2>Commentaires généraux</h2>${genCur.map(pt).join("")}${genPast.length ? `<div class="past-h">Commentaires traités</div>${genPast.map(pt).join("")}` : ""}${pv.commentaires ? `<div class="rich" style="margin-top:6px">${richHtml(pv.commentaires)}</div>` : ""}${gp.length ? `<div style="font-size:11px;color:#444;margin-top:8px">Photos d'avancement du chantier</div><div class="phs r${R.perRow}">${gp.map(ph => `<figure><div class="fig">${phView(ph)}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}` : ""; })()}
     ${plan ? `<h2>Planning prévisionnel</h2>${plan}` : ""}
+    ${(() => { if (!R.plans) return ""; const vis = S.points.filter(p => ptState(p, n) && ptState(p, n) !== "past" && locsOf(p).length); const ids = new Set(vis.flatMap(p => locPlanIds(p))); const pls = plans().filter(x => ids.has(x.id)); return pls.length ? `<h2>Localisation sur plan</h2>${pls.map(pl => `<figure class="pl plfull"><div class="fig">${planView(pl, vis, n, {})}</div><figcaption>${esc(pl.nom)}</figcaption></figure>`).join("")}` : ""; })()}
     <h2>Avancement lot par lot</h2>
     ${blocks}
     ${others.length ? `<h2>Autres points vous concernant</h2>${others.map(pt).join("")}` : ""}
