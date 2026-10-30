@@ -79,7 +79,12 @@ img{max-width:100%}
 .rail-foot{padding:10px 16px;border-top:1px solid var(--rule-2);display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:12px;color:var(--ink-3)}
 
 .main{min-width:0;overflow:auto;display:flex;flex-direction:column}
-.empty{margin:auto;max-width:440px;text-align:center;padding:40px 24px;color:var(--ink-2)}
+.home-ops{text-align:left;margin:0 0 22px;display:grid;gap:8px}
+.home-ops h3{margin:0 0 2px;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
+.op-card{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:baseline;text-align:left;padding:10px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);cursor:pointer;font:inherit;color:var(--ink)}
+.op-card:hover,.op-card:focus-visible{border-color:var(--ink-3);background:var(--panel)}
+.op-card b{font-stretch:88%}.op-card span{color:var(--ink-2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.op-card em{grid-column:1/-1;font-style:normal;font-size:12px;color:var(--ink-3)}
+.empty{margin:auto;max-width:520px;width:100%;text-align:center;padding:40px 24px;color:var(--ink-2)}
 .empty h2{color:var(--ink);font-stretch:90%;margin:0 0 8px}
 
 .d-head{background:var(--paper);border-bottom:1px solid var(--rule);padding:18px 28px 0;position:sticky;top:0;z-index:5}
@@ -586,11 +591,18 @@ function keepDraft() {
   const v = k => f.querySelector(`[data-pf="${k}"]`);
   S.edit.draft = { form: f.dataset.form, intId: f.querySelector('[data-pf="intId"]')?.value, titre: v("titre")?.value || "", echeance: v("echeance")?.value || "", texte: v("texte")?.value || "", memo: !!v("memo")?.checked, urgent: !!v("urgent")?.checked, also: [...f.querySelectorAll("[data-also]")].filter(x => x.checked).map(x => x.dataset.also) };
 }
+// Accueil : accès direct aux opérations en cours (hors archivées), les plus récemment consultées en premier.
+function homeOps() {
+  const all = S.dossiers || []; const act = all.filter(x => x.statut !== "archive").sort((a, b) => String(a.code || "").localeCompare(String(b.code || ""), "fr", { numeric: true }));
+  if (!all.length) return "";
+  const arch = all.length - act.length;
+  return `<div class="home-ops"><h3>Opérations en cours</h3>${act.length ? act.map(x => `<button class="op-card" data-act="open-dossier" data-id="${esc(x.id)}"><b>${esc(x.code || "—")}</b><span>${esc(x.objet || x.adresse || "")}</span>${x.lastPv ? `<em>PV n° ${esc(x.lastPv.num)} du ${esc(fmt(x.lastPv.date))}</em>` : `<em>Aucun PV</em>`}</button>`).join("") : `<p class="small muted">Aucune opération en cours.</p>`}${arch ? `<p class="small muted" style="margin:6px 0 0">${arch} opération(s) archivée(s) — rouvrez-les depuis leur fichier .pv.</p>` : ""}</div>`;
+}
 function renderMain() {
   keepDraft();
   const main = $("#main"); const d = D();
   if (!d) {
-    main.innerHTML = `<div class="empty"><img src="${ICON_APP}" alt="" style="width:64px;height:64px;margin-bottom:12px"><h2>AGOA PV</h2><p>Créez une opération à partir de Ragic, ou ouvrez le fichier .pv d'une opération existante.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="new-dossier">${ICON.plus}Opération</button><label class="btn">Ouvrir opération<input type="file" accept=".pv,.agoarv,application/json" hidden data-open-pv></label></div></div>`;
+    main.innerHTML = `<div class="empty"><img src="${ICON_APP}" alt="" style="width:64px;height:64px;margin-bottom:12px"><h2>AGOA PV</h2>${homeOps()}<p>Créez une opération à partir de Ragic, ou ouvrez le fichier .pv d'une opération existante.</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="new-dossier">${ICON.plus}Opération</button><label class="btn">Ouvrir opération<input type="file" accept=".pv,.agoarv,application/json" hidden data-open-pv></label></div></div>`;
     return;
   }
   const scroll = main.scrollTop;
@@ -858,7 +870,7 @@ function viewPlans(d) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label class="f" style="flex:1;min-width:200px">Nom du plan<input type="text" data-docname="${sel.id}" value="${esc(sel.nom)}"></label><button class="btn danger" data-act="doc-del" data-id="${sel.id}">Supprimer ce plan</button></div>
       <div class="plan-stage"><div class="plan-wrap"><img src="${esc(docSrc(sel))}" alt="${esc(sel.nom)}">${pinsSVG(sel, pts, n, { clickable: true })}</div></div>
       <p class="small muted" style="margin:0">${pts.length ? `${pts.length} point(s) localisé(s) sur ce plan${pv ? ` au PV n°${n}` : ""}. Cliquez sur une pastille pour ouvrir le point.` : "Aucun point localisé sur ce plan. Utilisez « Localiser » sur un point de la réunion."}</p>
-    </div>` : `<div class="sec-b muted">Importez vos plans (image ou PDF, première page) pour y placer les points avec des pastilles numérotées. Les plans localisés apparaissent dans le compte rendu.</div>`}
+    </div>` : `<div class="sec-b muted">Importez vos plans (image ou PDF : vous choisissez les pages à importer) pour y placer les points avec des pastilles numérotées. Les plans localisés apparaissent dans le compte rendu.</div>`}
   </section>
   <section class="sec">
     <div class="sec-h"><h3>Documents du chantier</h3><label class="btn">${ICON.plus}Ajouter un document<input type="file" hidden multiple accept="application/pdf,image/*,text/plain,text/csv,.md,.json" data-upload="doc"></label></div>
@@ -875,25 +887,64 @@ function loadPdfJs() {
   pdfLib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; res(window.pdfjsLib); }; s.onerror = () => { pdfLib = null; rej(new Error("pdf.js indisponible")); }; document.head.appendChild(s); });
   return pdfLib;
 }
-async function pdfFirstPage(file, max) {
-  const lib = await loadPdfJs(); const doc = await lib.getDocument({ data: await file.arrayBuffer() }).promise; const page = await doc.getPage(1);
+async function pdfOpen(file) { const lib = await loadPdfJs(); return lib.getDocument({ data: await file.arrayBuffer() }).promise; }
+async function pdfPageCanvas(doc, n, max) {
+  const page = await doc.getPage(n);
   const v0 = page.getViewport({ scale: 1 }); const sc = max / Math.max(v0.width, v0.height); const v = page.getViewport({ scale: sc });
   const c = document.createElement("canvas"); c.width = Math.round(v.width); c.height = Math.round(v.height); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
   await page.render({ canvasContext: x, viewport: v }).promise; return c;
+}
+// Choix des pages à importer d'un PDF de plusieurs pages (vignettes + cases à cocher). Résout la liste des pages, ou null si annulé.
+function pickPdfPages(doc, nom) {
+  return new Promise(resolve => {
+    const N = doc.numPages; const sel = new Set([1]);
+    const bg = document.createElement("div"); bg.className = "ov-bg"; bg.setAttribute("role", "dialog"); bg.setAttribute("aria-modal", "true"); bg.style.zIndex = 400;
+    bg.innerHTML = `<div class="modal wide"><div class="modal-h"><h3>Pages à importer — ${esc(nom)}</h3><button class="btn ghost" data-x>Annuler</button></div>
+      <div class="modal-b"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">${N} pages. Cochez celles à importer (chacune devient un plan).</span><button class="btn sm" data-all>Tout cocher</button><button class="btn sm" data-none>Tout décocher</button></div>
+      <div class="pdfpick" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:60vh;overflow:auto;padding:2px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><span class="small muted" data-cnt></span><button class="btn primary" data-ok>Importer</button></div></div></div>`;
+    document.body.appendChild(bg);
+    const grid = bg.querySelector(".pdfpick"); const cnt = bg.querySelector("[data-cnt]"); const ok = bg.querySelector("[data-ok]");
+    const upd = () => { cnt.textContent = sel.size + " page(s) sélectionnée(s)"; ok.disabled = !sel.size; grid.querySelectorAll("label").forEach(l => { const on = sel.has(+l.dataset.p); l.querySelector("input").checked = on; l.style.outline = on ? "2px solid var(--accent, #c8102e)" : "1px solid var(--rule)"; }); };
+    for (let n = 1; n <= N; n++) {
+      const l = document.createElement("label"); l.dataset.p = n; l.style.cssText = "display:grid;gap:4px;justify-items:center;padding:6px;border-radius:6px;cursor:pointer;background:#fff;font-size:12px";
+      l.innerHTML = `<div style="width:100%;aspect-ratio:3/4;background:#f1f1ef;display:grid;place-items:center;overflow:hidden"><span class="small muted">…</span></div><span><input type="checkbox" class="chk"> Page ${n}</span>`;
+      l.querySelector("input").onchange = e => { e.target.checked ? sel.add(n) : sel.delete(n); upd(); };
+      grid.appendChild(l);
+    }
+    // vignettes générées une à une, sans bloquer la fenêtre
+    (async () => { for (let n = 1; n <= N && bg.isConnected; n++) { try { const c = await pdfPageCanvas(doc, n, 260); c.style.cssText = "max-width:100%;max-height:100%"; const box = grid.children[n - 1]?.firstElementChild; if (box) { box.innerHTML = ""; box.appendChild(c); } } catch {} } })();
+    const done = v => { bg.remove(); resolve(v); };
+    bg.querySelector("[data-x]").onclick = () => done(null);
+    bg.querySelector("[data-all]").onclick = () => { for (let n = 1; n <= N; n++) sel.add(n); upd(); };
+    bg.querySelector("[data-none]").onclick = () => { sel.clear(); upd(); };
+    ok.onclick = () => done([...sel].sort((a, b) => a - b));
+    upd();
+  });
 }
 const waitFor = (cond, ms = 4000) => new Promise(res => { const t0 = Date.now(); const tick = () => cond() || Date.now() - t0 > ms ? res() : setTimeout(tick, 60); tick(); });
 async function uploadPlan(file) {
   toast("Import du plan…", 1800);
   try {
     const big = !!CAP.assets; const max = big || NATIVE ? 2600 : 1400;
-    let canvas;
-    if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) canvas = await pdfFirstPage(file, max);
-    else canvas = (await resize(file, max, "image/jpeg", .85)).canvas;
-    const nom = file.name.replace(/\.[^.]+$/, "");
-    let doc = { kind: "plan", nom, w: canvas.width, h: canvas.height, mime: "image/jpeg", createdAt: Date.now() };
-    if (big) { const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", .85)); doc.assetId = (await CAP.assets.upload(blob, { type: "image/jpeg" })).id; }
-    else { let q = .6, url; do { url = canvas.toDataURL("image/jpeg", q); q -= .1; } while (url.length > LIM && q > .15); doc.dataUrl = url; }
-    const id = uid(); await Store.set(dPath() + "/docs/" + id, doc); S.planSel = id; toast("Plan ajouté"); return id;
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    const base = file.name.replace(/\.[^.]+$/, "");
+    let jobs; // [{ nom, get: () => canvas }]
+    if (isPdf) {
+      const pdf = await pdfOpen(file); let pages = [1];
+      if (pdf.numPages > 1) { pages = await pickPdfPages(pdf, base); if (!pages) return; }
+      jobs = pages.map(n => ({ nom: pdf.numPages > 1 ? `${base} — p. ${n}` : base, get: () => pdfPageCanvas(pdf, n, max) }));
+    } else jobs = [{ nom: base, get: async () => (await resize(file, max, "image/jpeg", .85)).canvas }];
+    let first = null;
+    for (let i = 0; i < jobs.length; i++) {
+      if (jobs.length > 1) toast(`Import du plan ${i + 1}/${jobs.length}…`, 1800);
+      const canvas = await jobs[i].get();
+      let doc = { kind: "plan", nom: jobs[i].nom, w: canvas.width, h: canvas.height, mime: "image/jpeg", createdAt: Date.now() + i };
+      if (big) { const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", .85)); doc.assetId = (await CAP.assets.upload(blob, { type: "image/jpeg" })).id; }
+      else { let q = .6, url; do { url = canvas.toDataURL("image/jpeg", q); q -= .1; } while (url.length > LIM && q > .15); doc.dataUrl = url; }
+      const id = uid(); await Store.set(dPath() + "/docs/" + id, doc); if (!first) first = id;
+    }
+    S.planSel = first; toast(jobs.length > 1 ? `${jobs.length} plans ajoutés` : "Plan ajouté"); return first;
   } catch (e) { console.warn(e); toast(/pdf/i.test(e.message || "") ? "Lecture du PDF impossible : exportez la page en image (PNG/JPG)." : "Import impossible : " + (e.code || e.message || "erreur"), 4500); }
 }
 async function uploadDoc(file) {
@@ -925,7 +976,7 @@ function openPinner(pointId, viewOnly, opt = {}) {
     pl = plans();
     if (!pl.length) {
       L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true"><div class="modal"><div class="modal-h"><h3>Localiser — point ${esc(p.num)}</h3><button class="btn ghost" data-x>Fermer</button></div>
-        <div class="modal-b"><p style="margin:0">Aucun plan dans ce dossier. Importez le plan concerné (image ou PDF, première page) puis cliquez dessus pour placer le point.</p>
+        <div class="modal-b"><p style="margin:0">Aucun plan dans ce dossier. Importez le plan concerné (image ou PDF : vous choisissez les pages à importer) puis cliquez dessus pour placer le point.</p>
         <label class="btn primary" style="justify-self:start">Importer un plan<input type="file" accept="image/*,application/pdf,.pdf" hidden data-newplan></label></div></div></div>`;
       L.querySelectorAll("[data-x]").forEach(b => b.onclick = close);
       L.querySelector("[data-newplan]").onchange = async e => { const f = e.target.files[0]; if (!f) return; const id = await uploadPlan(f); if (id) { await waitFor(() => plans().some(x => x.id === id)); planId = id; } draw(); };
@@ -1077,6 +1128,7 @@ async function onMainClick(e) {
   const a = t.dataset.act; const d = D();
   const act = {
     "new-dossier": openNewDossier,
+    "open-dossier": () => openDossier(t.dataset.id),
     "new-pv": () => newPv().then(() => { S.tab = "reunion"; renderMain(); $("#main").scrollTop = 0; }),
     "pv-close": () => { const pv = S.pvs.find(x => x.id === t.dataset.pv) || curPv(); updPv(pv, { statut: "diffuse", transmis: pv.transmis || todayISO() }); },
     "pv-reopen": () => { const pv = S.pvs.find(x => x.id === t.dataset.pv) || curPv(); updPv(pv, { statut: "brouillon" }); },
