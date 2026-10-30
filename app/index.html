@@ -317,6 +317,9 @@ table.t td.c,table.t th.c{text-align:center;width:90px}
 .doc .dp .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .doc .dp .h b{font-size:12.5px}
 .doc .pnum{height:15px;font-size:10px;padding:0 4px}
+.doc table.ax{width:100%;border-collapse:collapse;font-size:11.5px;margin:2px 0 10px}
+.doc table.ax th{text-align:left;font-size:10.5px;color:#555;border-bottom:1px solid #999;padding:2px 6px}
+.doc table.ax td{border-bottom:1px solid #e3e3e3;padding:3px 6px;vertical-align:top}
 .doc .past-h{font-size:10.5px;color:#2E7D32;font-weight:700;margin:8px 0 2px;text-transform:uppercase;letter-spacing:.04em}
 .doc .dp.past{margin:2px 0;opacity:.85}
 .doc .dp .tx{white-space:pre-wrap;margin-top:3px}
@@ -2072,8 +2075,11 @@ function docHTML(pv, R = REP_DEFAULT) {
   const box = on => `<span class="box ${on ? "on" : ""}"></span>`;
   const list = ints(d); const byId = Object.fromEntries(list.map(i => [i.id, i]));
   const only = R.only && byId[R.only] ? byId[R.only] : null;
+  // Un point validé au PV précédent reste dans l'avancement lot par lot ; dès le PV suivant il passe dans l'annexe (points réalisés).
+  const prevN = Math.max(0, ...S.pvs.filter(x => +x.num < n).map(x => +x.num));
+  const inAnnex = p => ptState(p, n) === "past" && realAt(p) < prevN;
   const concerns = p => !only || p.intId === only.id || (p.also || []).includes(only.id);
-  const visible = p => { const st = ptState(p, n); return st && (R.realises || st !== "realise") && concerns(p); };
+  const visible = p => { const st = ptState(p, n); return st && !inAnnex(p) && (R.realises || st !== "realise") && concerns(p); };
   const pt = p => {
     const st = ptState(p, n); const late = isLate(p, pv, st);
     const tag = p.memo && (st === "new" || st === "open") ? '<span class="tg memo">Pour mémoire</span>' : { realise: `<span class="tg ok">${p.memo ? "Clos" : "Réalisé"}</span>`, rappel: '<span class="tg warn">Rappel</span>', urgent: '<span class="tg urg">Rappel urgent</span>', new: '<span class="tg new">Nouveau</span>', open: "" }[st];
@@ -2088,7 +2094,7 @@ function docHTML(pv, R = REP_DEFAULT) {
       ${(p.todo || []).length ? `<div class="td">${p.todo.map(t => `<div>${box(t.done)} ${esc(t.t)}</div>`).join("")}</div>` : ""}
       ${phs.length ? `<div class="phs r${R.perRow}">${phs.map(ph => `<figure><div class="fig">${phView(ph)}</div>${ph.cap ? `<figcaption>${esc(ph.cap)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}</div>`;
   };
-  const genPts = S.points.filter(p => p.intId === "gen" && visible(p) || (p.intId === "gen" && only && ptState(p, n) && (R.realises || ptState(p, n) !== "realise"))).sort((x, y) => x.seq - y.seq);
+  const genPts = S.points.filter(p => p.intId === "gen" && visible(p) || (p.intId === "gen" && only && ptState(p, n) && !inAnnex(p) && (R.realises || ptState(p, n) !== "realise"))).sort((x, y) => x.seq - y.seq);
   const genCur = genPts.filter(p => !["past", "realise"].includes(ptState(p, n))), genPast = [...genPts.filter(p => ptState(p, n) === "past"), ...genPts.filter(p => ptState(p, n) === "realise")];
   const blocks = (only ? [only] : list).map(i => {
     const all = S.points.filter(p => p.intId === i.id && visible(p)).sort((x, y) => x.seq - y.seq);
@@ -2099,6 +2105,17 @@ function docHTML(pv, R = REP_DEFAULT) {
       ${past.length ? `<div class="past-h">Points traités</div>${past.map(pt).join("")}` : ""}
       ${only ? "" : refs.map(p => `<div style="font-size:11.5px;color:#444;margin:2px 0 6px 10px">Concerné aussi par le point <b>${esc(p.num)}</b> — ${esc(p.titre)}</div>`).join("")}`;
   }).join("");
+  const annex = (() => {
+    if (!R.realises) return "";
+    const done = S.points.filter(p => inAnnex(p) && concerns(p));
+    if (!done.length) return "";
+    const pvOf = k => S.pvs.find(y => +y.num === +k);
+    const groups = [{ head: "Commentaires généraux", lot: "0", pts: done.filter(p => p.intId === "gen") }].concat((only ? [only] : list).map(i => ({ head: i.nom, lot: i.lot, pts: done.filter(p => p.intId === i.id) }))).filter(g => g.pts.length);
+    return `<div class="pb"></div><h2>Annexe — Points réalisés</h2>
+    <p style="font-size:11.5px;color:#444;margin:2px 0 8px">Points réalisés lors des réunions précédentes, regroupés par lot.</p>
+    ${groups.map(g => `<div class="lt"><span class="lot" style="background:${lotColor(g.lot)}">${esc(g.lot)}</span>${esc(g.head)}</div>
+      <table class="ax"><thead><tr><th style="width:60px">N°</th><th>Titre</th><th style="width:60px">PV n°</th><th style="width:90px">Date du PV</th></tr></thead><tbody>${g.pts.sort((x, y) => String(x.num).localeCompare(String(y.num), "fr", { numeric: true })).map(p => { const k = realAt(p); const v = pvOf(k); return `<tr><td><b>${esc(p.num)}</b></td><td>${esc(p.titre)}</td><td>${esc(k)}</td><td>${v ? esc(fmt(v.date)) : ""}</td></tr>`; }).join("")}</tbody></table>`).join("")}`;
+  })();
   const others = only ? S.points.filter(p => p.intId !== only.id && (p.also || []).includes(only.id) && visible(p)).sort((x, y) => x.num.localeCompare(y.num, "fr", { numeric: true })) : [];
   const nextTxt = pr.date ? `Prochaine réunion le ${esc(fmtLong(pr.date))}${pr.heure ? " à " + esc(pr.heure.replace(":", "h")) : ""}${pr.lieu ? " — " + esc(pr.lieu) : ""}` : "";
   const plan = R.planning && d.planningInPv !== false ? gantt(d, true) : "";
@@ -2123,6 +2140,7 @@ function docHTML(pv, R = REP_DEFAULT) {
     <h2>Avancement lot par lot</h2>
     ${blocks}
     ${others.length ? `<h2>Autres points vous concernant</h2>${others.map(pt).join("")}` : ""}
+    ${annex}
     <div class="ft">${esc(d.code)} — compte rendu n° ${n} du ${fmt(pv.date)}${only ? " — extrait" : ""}</div>
   </article>`;
 }
