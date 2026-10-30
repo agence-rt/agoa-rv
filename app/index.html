@@ -88,6 +88,12 @@ img{max-width:100%}
 .empty h2{color:var(--ink);font-stretch:90%;margin:0 0 8px}
 
 .d-head{background:var(--paper);border-bottom:1px solid var(--rule);padding:18px 28px 0;position:sticky;top:0;z-index:5}
+.save-box{display:flex;align-items:center;gap:10px;margin-left:auto}
+.save-st{font-size:12px;color:var(--muted,#777)}
+#btnSave .si{transition:transform .3s}
+#btnSave.saving .si{animation:svpulse .8s ease-in-out infinite}
+#btnSave.saved{background:#2e7d32;border-color:#2e7d32}
+@keyframes svpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
 .d-head .row{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
 .d-code{font-size:28px;font-weight:800;font-stretch:80%;letter-spacing:.005em;line-height:1.05;margin:0}
 .d-sub{color:var(--ink-2);margin-top:4px}
@@ -643,6 +649,7 @@ function renderMain() {
         <div class="d-sub"><b>${esc(d.objet || "")}</b>${d.objet && d.adresse ? " — " : ""}${esc(d.adresse || "")}</div>
         <div class="d-sub small">${[...[d.moa, d.syndic, d.gestionnaire].filter(Boolean).map(esc), d.codeAcces ? `<b>Code d'accès : ${esc(d.codeAcces)}</b>` : ""].filter(Boolean).join(" · ")}</div>
       </div>
+      <div class="save-box"><span class="save-st" id="saveSt">${esc(saveLabel())}</span><button class="btn primary" id="btnSave" data-act="save-now" title="Enregistrer (Ctrl+S)">${saveIcon}<span>Enregistrer</span></button></div>
     </div>
     <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${l}</button>`).join("")}</div>
   </header>
@@ -650,6 +657,28 @@ function renderMain() {
   if (S.tab === "dossier") openAgence($("#optsInline"));
   main.scrollTop = scroll;
 }
+
+/* ---------- Enregistrement ---------- */
+const saveIcon = '<svg class="si" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>';
+let lastSaved = null, saving = false;
+function saveLabel() { return lastSaved ? "Enregistré à " + lastSaved.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""; }
+async function saveNow(manual) {
+  if (saving || !D()) return; saving = true;
+  const btn = $("#btnSave"); btn && btn.classList.add("saving");
+  try {
+    if (NATIVE) { const d = D(); clearTimeout(fileSaveT); Store.flush(); if (d && d.fichier) await writeFileNow(d); }
+    else if (Store.mode === "local") Store.persist();
+    await new Promise(r => setTimeout(r, manual ? 600 : 900));
+    lastSaved = new Date();
+    const st = $("#saveSt"); if (st) st.textContent = saveLabel();
+    const b2 = $("#btnSave"); if (b2) { b2.classList.remove("saving"); b2.classList.add("saved"); setTimeout(() => b2.classList.remove("saved"), 1400); }
+    if (manual) toast("Enregistré");
+  } catch (e) { const b2 = $("#btnSave"); b2 && b2.classList.remove("saving"); toast("Enregistrement impossible : " + (e.message || "erreur"), 4500); }
+  saving = false;
+}
+setInterval(() => saveNow(false), 60000);
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveNow(true); } });
+document.addEventListener("click", e => { if (e.target.closest("[data-act=save-now]")) saveNow(true); });
 
 /* ---------- Réunion ---------- */
 function viewReunion(d) {
