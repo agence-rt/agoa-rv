@@ -1,1 +1,1 @@
-Déploiement n°33 — Plans importés : suppression directe (✕) sur chaque plan
+Déploiement n°34 — Intervenants : autres personnes affichées « Entreprise / rôle - nom »
