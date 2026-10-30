@@ -1,1 +1,1 @@
-Déploiement n°28 — Point : possibilité de changer l'intervenant a posteriori (le point est renuméroté dans le bon lot)
+Déploiement n°29 — PV : plans concernés pleine largeur avant l'avancement lot par lot (tous les repères) ; photos et plans : Cadrer (formats, zoom) et Annoter (couleurs)

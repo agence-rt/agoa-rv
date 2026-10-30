@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°29** — v0.29.0 — 2026-10-30 — PV : plans concernés pleine largeur avant l'avancement lot par lot (tous les repères) ; photos et plans : Cadrer (formats, zoom) et Annoter (couleurs)
 - **n°28** — v0.28.0 — 2026-10-30 — Point : possibilité de changer l'intervenant a posteriori (le point est renuméroté dans le bon lot)
 - **n°27** — v0.27.0 — 2026-10-30 — Plans : plusieurs repères par point (pastilles, flèches, rectangles de localisation) ; photos : zoom et recadrage
 - **n°26** — v0.26.0 — 2026-10-30 — Import de plans PDF : choix des pages ; accueil : accès direct aux opérations en cours
