@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°32** — v0.32.0 — 2026-10-30 — Bouton Enregistrer (Ctrl+S) et enregistrement automatique chaque minute avec animation discrète
 - **n°31** — v0.31.0 — 2026-10-30 — PV imprimé : annexe des points réalisés lot par lot (transfert automatique au PV suivant)
 - **n°30** — v0.30.0 — 2026-10-30 — Intervenants : possibilité d'ajouter d'autres personnes pour un même lot (présence, convocation, e-mails du PV)
 - **n°29** — v0.29.0 — 2026-10-30 — PV : plans concernés pleine largeur avant l'avancement lot par lot (tous les repères) ; photos et plans : Cadrer (formats, zoom) et Annoter (couleurs)
