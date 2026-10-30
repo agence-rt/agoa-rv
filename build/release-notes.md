@@ -1,1 +1,1 @@
-Déploiement n°30 — Intervenants : possibilité d'ajouter d'autres personnes pour un même lot (présence, convocation, e-mails du PV)
+Déploiement n°31 — PV imprimé : annexe des points réalisés lot par lot (transfert automatique au PV suivant)
