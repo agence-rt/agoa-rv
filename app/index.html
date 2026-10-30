@@ -145,6 +145,7 @@ table.t td.c,table.t th.c{text-align:center;width:90px}
 /* lot tile — signature element */
 .lot{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;border-radius:3px;color:#fff;font-weight:800;font-size:13px;font-stretch:85%;flex:none}
 .pnum{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:3px;font-weight:700;font-size:11.5px;line-height:1;font-stretch:85%;color:#fff;flex:none;letter-spacing:.01em}
+.pers-row td{background:var(--panel)}
 .ilogo{width:34px;height:34px;object-fit:contain;border:1px solid var(--rule-2);border-radius:4px;background:#fff;flex:none}
 
 /* lots and points */
@@ -517,6 +518,8 @@ const D = () => S.dossiers.find(d => d.id === S.cur) || null;
 const dPath = (id = S.cur) => "dossiers/" + id;
 const sortedPvs = () => [...S.pvs].sort((a, b) => a.num - b.num);
 const curPv = () => { const l = sortedPvs(); if (!l.length) return null; return l.find(p => p.id === S.pvSel) || l[l.length - 1]; };
+// Lignes de présence : chaque intervenant, puis les autres personnes du même lot (i.autres). Clé de présence : id, ou id.idPersonne.
+const presRows = (list, only) => list.filter(i => !only || i.id === only).flatMap(i => [{ key: i.id, int: i, pers: null, conv: i.convoque !== false }].concat((i.autres || []).map(a => ({ key: i.id + "." + a.id, int: i, pers: a, conv: a.convoque !== false }))));
 const ints = (d = D()) => [...(d?.intervenants || [])].sort((a, b) => (parseFloat(a.lot) || 999) - (parseFloat(b.lot) || 999) || String(a.lot).localeCompare(String(b.lot)));
 function prof(d = D()) {
   const k = (d && PROFILS[d.agence]) ? d.agence : (PROFILS[S.cfg.defaut] ? S.cfg.defaut : "rt");
@@ -679,11 +682,11 @@ function viewReunion(d) {
     <div class="sec-h"><h3>Intervenants</h3><span class="hint">Présence souhaitée, présence effective et convocation à la prochaine réunion</span></div>
     <div class="scroll-x"><table class="t">
       <thead><tr><th>Lot</th><th>Intervenant</th><th>Contact</th><th class="c">Convoqué</th><th class="c">Présent</th><th class="c">Prochaine réunion</th></tr></thead>
-      <tbody>${ints(d).map(i => { const p = pres[i.id] || { c: i.convoque !== false, p: false, n: i.convoque !== false }; return `
+      <tbody>${presRows(ints(d)).map(r => { const i = r.int; const p = pres[r.key] || { c: r.conv, p: false, n: r.conv }; const nm = r.pers ? (r.pers.contact || "Autre personne") : i.nom; return `
         <tr><td><span class="lot" style="background:${lotColor(i.lot)}">${esc(i.lot)}</span></td>
-        <td><div style="display:flex;gap:8px;align-items:center">${i.logo ? `<img class="ilogo" src="${i.logo}" alt="">` : ""}<div><b>${esc(i.nom)}</b><div class="small muted">${esc(i.role || "")}${i.contact ? " — " + esc(i.contact) : ""}</div></div></div></td>
-        <td class="small">${esc(i.tel || "")}<br>${esc(i.email || "")}</td>
-        ${["c", "p", "n"].map(k => `<td class="c"><input type="checkbox" class="chk" data-pres="${i.id}:${k}" ${p[k] ? "checked" : ""} ${dis} aria-label="${({ c: "Convoqué", p: "Présent", n: "Prochaine réunion" })[k]} — ${esc(i.nom)}"></td>`).join("")}</tr>`; }).join("")}
+        <td><div style="display:flex;gap:8px;align-items:center">${i.logo && !r.pers ? `<img class="ilogo" src="${i.logo}" alt="">` : ""}<div><b>${esc(nm)}</b><div class="small muted">${r.pers ? `${esc(i.nom)}${r.pers.role ? " — " + esc(r.pers.role) : ""}` : `${esc(i.role || "")}${i.contact ? " — " + esc(i.contact) : ""}`}</div></div></div></td>
+        <td class="small">${esc((r.pers || i).tel || "")}<br>${esc((r.pers || i).email || "")}</td>
+        ${["c", "p", "n"].map(k => `<td class="c"><input type="checkbox" class="chk" data-pres="${r.key}:${k}" ${p[k] ? "checked" : ""} ${dis} aria-label="${({ c: "Convoqué", p: "Présent", n: "Prochaine réunion" })[k]} — ${esc(nm)}"></td>`).join("")}</tr>`; }).join("")}
       </tbody></table></div>
   </section>
 
@@ -1086,7 +1089,7 @@ function viewIntervenants(d) {
   return `<section class="sec">
     <div class="sec-h"><h3>Intervenants du chantier</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${CAP.mcp && d.code ? `<button class="btn" data-act="ragic-complete">Compléter depuis Ragic</button>` : ""}${CAP.mcp ? `<button class="btn" data-act="ent-search">Entreprise Ragic</button>` : ""}<button class="btn primary" data-act="int-add">${ICON.plus}Intervenant</button></div></div>
-    <div class="sec-b small muted" style="padding-bottom:0">Le numéro de lot sert à numéroter les points (lot 3 → 3.01, 3.02…). La case « Convoqué » fixe la valeur par défaut des nouvelles réunions.</div>
+    <div class="sec-b small muted" style="padding-bottom:0">Le numéro de lot sert à numéroter les points (lot 3 → 3.01, 3.02…). La case « Convoqué » fixe la valeur par défaut des nouvelles réunions. Le bouton « Personne » ajoute un autre interlocuteur du même lot (présence et convocation suivies séparément ; les points restent attribués au lot).</div>
     <div class="scroll-x"><table class="t" style="margin-top:8px">
       <thead><tr><th style="width:70px">Lot</th><th>Nom / entreprise</th><th>Corps d'état / rôle</th><th>Contact</th><th>Téléphone</th><th>E-mail</th><th>Logo</th><th class="c">Convoqué</th><th></th></tr></thead>
       <tbody>${list.map(i => `<tr>
@@ -1098,7 +1101,16 @@ function viewIntervenants(d) {
         <td><input type="email" data-int-f="${i.id}:email" value="${esc(i.email || "")}"></td>
         <td><div style="display:flex;gap:6px;align-items:center">${i.logo ? `<img class="ilogo" src="${i.logo}" alt="Logo ${esc(i.nom)}"><button class="btn ghost sm" data-act="int-logo-del" data-id="${i.id}" title="Retirer le logo">Retirer</button>` : `<label class="btn sm">Ajouter<input type="file" accept="image/*" hidden data-int-logo="${i.id}"></label>`}</div></td>
         <td class="c"><input type="checkbox" class="chk" data-int-f="${i.id}:convoque" ${i.convoque !== false ? "checked" : ""}></td>
-        <td><button class="btn ghost sm danger" data-act="int-del" data-id="${i.id}" title="Supprimer">Supprimer</button></td></tr>`).join("")}
+        <td style="white-space:nowrap"><button class="btn ghost sm" data-act="pers-add" data-id="${i.id}" title="Ajouter une autre personne pour ce lot">${ICON.plus}Personne</button> <button class="btn ghost sm danger" data-act="int-del" data-id="${i.id}" title="Supprimer">Supprimer</button></td></tr>${(i.autres || []).map(a => `<tr class="pers-row">
+        <td style="text-align:right;color:var(--ink-3)" title="Même lot">↳</td>
+        <td><span class="small muted">${esc(i.nom)} — même lot</span></td>
+        <td><input type="text" data-pers-f="${i.id}:${a.id}:role" value="${esc(a.role || "")}" placeholder="Fonction"></td>
+        <td><input type="text" data-pers-f="${i.id}:${a.id}:contact" value="${esc(a.contact || "")}" placeholder="Nom de la personne"></td>
+        <td><input type="tel" data-pers-f="${i.id}:${a.id}:tel" value="${esc(a.tel || "")}"></td>
+        <td><input type="email" data-pers-f="${i.id}:${a.id}:email" value="${esc(a.email || "")}"></td>
+        <td></td>
+        <td class="c"><input type="checkbox" class="chk" data-pers-f="${i.id}:${a.id}:convoque" ${a.convoque !== false ? "checked" : ""} aria-label="Convoqué"></td>
+        <td><button class="btn ghost sm danger" data-act="pers-del" data-id="${i.id}" data-pid="${a.id}" title="Retirer cette personne">Retirer</button></td></tr>`).join("")}`).join("")}
       </tbody></table></div>
     ${list.length ? "" : `<div class="sec-b"><p class="muted">Aucun intervenant.</p></div>`}
   </section>`;
@@ -1225,6 +1237,8 @@ async function onMainClick(e) {
     "plan-crop": () => openCrop(t.dataset.id, "plan"),
     "ph-move": () => movePhoto(t.dataset.id, +t.dataset.dir),
     "int-add": () => addInt(),
+    "pers-add": () => addPers(t.dataset.id),
+    "pers-del": () => delPers(t.dataset.id, t.dataset.pid),
     "int-del": () => delInt(t.dataset.id),
     "int-logo-del": () => setIntField(t.dataset.id, "logo", ""),
     "ragic-complete": () => ragicComplete(false),
@@ -1253,7 +1267,7 @@ async function onMainChange(e) {
   if (t.dataset.act === "pv-sel") { S.pvSel = t.value; S.edit = null; renderMain(); return; }
   if (ds.pvField) return updPv(pv, { [ds.pvField]: t.value });
   if (ds.prochaine) return updPv(pv, { prochaine: { ...(pv.prochaine || {}), [ds.prochaine]: t.value } });
-  if (ds.pres) { const [iid, k] = ds.pres.split(":"); const i = (d.intervenants || []).find(x => x.id === iid); const base = (pv.presence || {})[iid] || { c: i?.convoque !== false, p: false, n: i?.convoque !== false }; return updPv(pv, { presence: { ...(pv.presence || {}), [iid]: { ...base, [k]: t.checked } } }); }
+  if (ds.pres) { const [key, k] = ds.pres.split(":"); const row = presRows(ints(d)).find(r => r.key === key); const base = (pv.presence || {})[key] || { c: row ? row.conv : true, p: false, n: row ? row.conv : true }; return updPv(pv, { presence: { ...(pv.presence || {}), [key]: { ...base, [k]: t.checked } } }); }
   if (ds.note) { const p = S.points.find(x => x.id === ds.note); return safe(Store.update(dPath() + "/points/" + p.id, { notes: { ...(p.notes || {}), [pv.num]: t.value } })); }
   if (ds.upload) { const files = [...t.files]; t.value = ""; for (const f of files) await (ds.upload === "plan" ? uploadPlan(f) : uploadDoc(f)); return; }
   if (ds.phcap) { const x = S.photos.find(y => y.id === ds.phcap); if (x) { x.cap = t.value.trim(); return safe(Store.update(dPath() + "/photos/" + x.id, { cap: x.cap })); } return; }
@@ -1261,6 +1275,7 @@ async function onMainChange(e) {
   if (ds.todo) { const [pid, tid] = ds.todo.split(":"); const p = S.points.find(x => x.id === pid); return setTodo(pid, (p.todo || []).map(x => x.id === tid ? { ...x, done: t.checked } : x)); }
   if (ds.photos) { const files = [...t.files]; t.value = ""; return addPhotos(ds.photos, files); }
   if ("pfNewphotos" in ds) { const files = [...t.files]; t.value = ""; if (!S.edit) return; S.edit.files = [...(S.edit.files || []), ...files.map(file => ({ file, url: URL.createObjectURL(file) }))]; refreshNewPhotos(); return; }
+  if (ds.persF) { const [iid, pid, k] = ds.persF.split(":"); return setPersField(iid, pid, k, t.type === "checkbox" ? t.checked : t.value.trim()); }
   if (ds.intF) { const [iid, k] = ds.intF.split(":"); return setIntField(iid, k, t.type === "checkbox" ? t.checked : t.value.trim()); }
   if (ds.intLogo) { const f = t.files[0]; t.value = ""; if (f) { const url = await imgToDataUrl(f, 240, "image/png"); setIntField(ds.intLogo, "logo", url); } return; }
   if (ds.plan) { const [rid, k] = ds.plan.split(":"); return saveDossier({ planning: (d.planning || []).map(r => r.id === rid ? { ...r, [k]: t.value } : r) }); }
@@ -1284,7 +1299,7 @@ async function newPv() {
   const d = D(); const list = sortedPvs(); const prev = list[list.length - 1];
   const num = prev ? prev.num + 1 : firstPvNum(d);
   const date = prev?.prochaine?.date || todayISO();
-  const presence = {}; (d.intervenants || []).forEach(i => { const pn = prev?.presence?.[i.id]; const c = pn ? !!pn.n : i.convoque !== false; presence[i.id] = { c, p: false, n: c }; });
+  const presence = {}; presRows(d.intervenants || []).forEach(r => { const pn = prev?.presence?.[r.key]; const c = pn ? !!pn.n : r.conv; presence[r.key] = { c, p: false, n: c }; });
   const pv = { num, date, transmis: "", presence, prochaine: { date: addDays(date, 7), heure: prev?.prochaine?.heure || "", lieu: prev?.prochaine?.lieu || "Sur site" }, commentaires: "", statut: "brouillon", createdAt: Date.now() };
   if (prev && prev.statut !== "diffuse") await updPv(prev, { statut: "diffuse", transmis: prev.transmis || todayISO() });
   await safe(Store.set(dPath() + "/pvs/" + pvId(num), pv));
@@ -1396,6 +1411,9 @@ function addInt() {
   const lot = String(Math.max(0, ...list.map(i => parseInt(i.lot, 10) || 0)) + 1);
   saveDossier({ intervenants: [...list, { id: uid(), lot, nom: "Nouvelle entreprise", role: "", contact: "", tel: "", email: "", logo: "", convoque: true }] });
 }
+function addPers(iid) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, autres: [...(i.autres || []), { id: uid(), contact: "", role: "", tel: "", email: "", convoque: true }] } : i) }); }
+function setPersField(iid, pid, k, v) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, autres: (i.autres || []).map(a => a.id === pid ? { ...a, [k]: v } : a) } : i) }); }
+function delPers(iid, pid) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, autres: (i.autres || []).filter(a => a.id !== pid) } : i) }); }
 function setIntField(iid, k, v) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, [k]: v } : i) }); }
 async function delInt(iid) {
   const d = D(); const i = (d.intervenants || []).find(x => x.id === iid);
@@ -2094,7 +2112,7 @@ function docHTML(pv, R = REP_DEFAULT) {
     <div style="color:#444;font-size:11.5px;margin-top:2px">${[d.moa && "Maître d'ouvrage : " + d.moa, d.syndic && "Syndic : " + d.syndic + (d.gestionnaire ? " (" + d.gestionnaire + ")" : ""), "Réf. " + d.code].filter(Boolean).map(esc).join(" — ")}</div>
     <div class="band">Intervenants convoqués</div>
     <table class="it"><thead><tr><th style="text-align:left">Intervenant</th><th style="text-align:left">Contact</th><th>Convoqué</th><th>Présent</th><th>Prochaine<br>réunion</th></tr></thead><tbody>
-      ${list.map(i => { const p = pres[i.id] || { c: i.convoque !== false, p: false, n: i.convoque !== false }; return `<tr><td><div style="display:flex;gap:6px;align-items:flex-start"><span class="lot" style="background:${lotColor(i.lot)};min-width:20px;height:20px;font-size:11px">${esc(i.lot)}</span><div><b>${esc(i.nom)}</b>${i.role ? `<br>${esc(i.role)}` : ""}${i.contact ? `<br>${esc(i.contact)}` : ""}</div></div></td><td>${esc(i.tel || "")}${i.tel && i.email ? "<br>" : ""}${esc(i.email || "")}</td><td class="c">${box(p.c)}</td><td class="c">${box(p.p)}</td><td class="c">${box(p.n)}</td></tr>`; }).join("")}
+      ${presRows(list).map(r => { const i = r.int; const p = pres[r.key] || { c: r.conv, p: false, n: r.conv }; const x = r.pers || i; return `<tr><td><div style="display:flex;gap:6px;align-items:flex-start"><span class="lot" style="background:${lotColor(i.lot)};min-width:20px;height:20px;font-size:11px">${esc(i.lot)}</span><div>${r.pers ? `<b>${esc(r.pers.contact || "Autre personne")}</b><br>${esc(i.nom)}${r.pers.role ? " — " + esc(r.pers.role) : ""}` : `<b>${esc(i.nom)}</b>${i.role ? `<br>${esc(i.role)}` : ""}${i.contact ? `<br>${esc(i.contact)}` : ""}`}</div></div></td><td>${esc(x.tel || "")}${x.tel && x.email ? "<br>" : ""}${esc(x.email || "")}</td><td class="c">${box(p.c)}</td><td class="c">${box(p.p)}</td><td class="c">${box(p.n)}</td></tr>`; }).join("")}
     </tbody></table>
     <h2>Prochaine réunion</h2>
     ${nextTxt ? `<p><span class="hl">${nextTxt}</span></p>` : ""}${d.reunionTexte ? `<p><span class="hl">${esc(d.reunionTexte)}</span></p>` : ""}
@@ -2111,7 +2129,7 @@ function docHTML(pv, R = REP_DEFAULT) {
 
 function mailInfo(pv, R) {
   const d = D(); const list = ints(d); const pres = pv.presence || {};
-  const rcpt = (R.only ? list.filter(i => i.id === R.only) : list.filter(i => { const p = pres[i.id]; return p ? (p.c || p.n || p.p) : i.convoque !== false; })).map(i => i.email).filter(e => e && /@/.test(e));
+  const rcpt = presRows(list, R.only).filter(r => { const p = pres[r.key]; return p ? (p.c || p.n || p.p) : r.conv; }).map(r => (r.pers || r.int).email).filter(e => e && /@/.test(e));
   const only = R.only && list.find(i => i.id === R.only);
   const subject = `${d.code} — Compte rendu de chantier n°${pv.num} du ${fmt(pv.date)}${only ? ` (extrait lot ${only.lot})` : ""}`;
   const pr = pv.prochaine || {};
