@@ -848,7 +848,7 @@ function pointForm(p, int) {
   const also = new Set(dr ? dr.also : (p?.also || []));
   return `<div class="pform" data-form="${isNew ? "new" : p.id}">
     <div class="grid2">
-      ${iid === "gen" ? `<label class="f">Rubrique<select data-pf="intId" disabled><option value="gen" selected>Commentaires généraux</option></select></label>` : `<label class="f">Intervenant${isNew ? "" : " (le numéro du point est conservé)"}<select data-pf="intId" ${isNew ? "" : "disabled"}>${ints(d).map(i => `<option value="${i.id}" ${i.id === iid ? "selected" : ""}>Lot ${esc(i.lot)} — ${esc(i.nom)}</option>`).join("")}</select></label>`}
+      ${iid === "gen" ? `<label class="f">Rubrique<select data-pf="intId" disabled><option value="gen" selected>Commentaires généraux</option></select></label>` : `<label class="f">Intervenant${isNew ? "" : " (le point est renuméroté si vous en changez)"}<select data-pf="intId">${ints(d).map(i => `<option value="${i.id}" ${i.id === (!isNew && dr && dr.intId ? dr.intId : iid) ? "selected" : ""}>Lot ${esc(i.lot)} — ${esc(i.nom)}</option>`).join("")}</select></label>`}
       <label class="f">Échéance<input type="date" data-pf="echeance" value="${esc(val("echeance") || "")}"></label>
     </div>
     <label class="f">Titre<input type="text" data-pf="titre" value="${esc(val("titre") || "")}" placeholder="Ex. Reprise des éclats sur le bardage" required></label>
@@ -1317,6 +1317,15 @@ async function savePoint(form) {
   } else {
     const p = S.points.find(x => x.id === form.dataset.form);
     const patch = { titre, texte: v("texte").value.trim(), echeance: v("echeance").value, memo, also };
+    // Changement d'intervenant : le point passe sous le bon lot et reçoit le prochain numéro libre de ce lot.
+    const newInt = v("intId") && v("intId").value;
+    if (p.intId !== "gen" && newInt && newInt !== p.intId) {
+      const it = (d.intervenants || []).find(i => i.id === newInt);
+      if (it) {
+        const lot = String(it.lot ?? "0"); const seq = Math.max(0, ...S.points.filter(x => String(x.lot) === lot && x.id !== p.id).map(x => x.seq || 0)) + 1;
+        Object.assign(patch, { intId: newInt, lot, seq, num: `${lot}.${String(seq).padStart(2, "0")}`, also: also.filter(a => a !== newInt) });
+      }
+    }
     if (v("urgent")) { const ev = { ...(p.events || {}) }; if (urgent) ev[n] = "urgent"; else if (ev[n] === "urgent") ev[n] = null; patch.events = ev; }
     S.edit = null; Object.assign(p, patch); renderMain();
     await safe(Store.update(dPath() + "/points/" + p.id, patch));
