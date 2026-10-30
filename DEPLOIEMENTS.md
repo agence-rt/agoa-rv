@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°33** — v0.33.0 — 2026-10-30 — Plans importés : suppression directe (✕) sur chaque plan
 - **n°32** — v0.32.0 — 2026-10-30 — Bouton Enregistrer (Ctrl+S) et enregistrement automatique chaque minute avec animation discrète
 - **n°31** — v0.31.0 — 2026-10-30 — PV imprimé : annexe des points réalisés lot par lot (transfert automatique au PV suivant)
 - **n°30** — v0.30.0 — 2026-10-30 — Intervenants : possibilité d'ajouter d'autres personnes pour un même lot (présence, convocation, e-mails du PV)

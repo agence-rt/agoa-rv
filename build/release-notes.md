@@ -1,1 +1,1 @@
-Déploiement n°32 — Bouton Enregistrer (Ctrl+S) et enregistrement automatique chaque minute avec animation discrète
+Déploiement n°33 — Plans importés : suppression directe (✕) sur chaque plan
