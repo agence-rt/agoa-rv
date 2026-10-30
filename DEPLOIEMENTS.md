@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°26** — v0.26.0 — 2026-10-30 — Import de plans PDF : choix des pages ; accueil : accès direct aux opérations en cours
 - **n°25** — v0.25.0 — 2026-10-21 — Connexions partagées : la clé Ragic, la clé Claude et le compte Google d'AGOA Launcher sont repris sans nouvelle saisie
 - **n°24** — v0.24.0 — 2026-10-09 — Installation : proposition d'un raccourci sur le Bureau ; impression PDF : marges haute et basse de 20 mm
 - **n°23** — v0.23.0 — 2026-10-09 — Impression PDF : plus de saut de page forcé avant les commentaires généraux

@@ -1,1 +1,1 @@
-Déploiement n°25 — Connexions partagées : la clé Ragic, la clé Claude et le compte Google d'AGOA Launcher sont repris sans nouvelle saisie
+Déploiement n°26 — Import de plans PDF : choix des pages ; accueil : accès direct aux opérations en cours
