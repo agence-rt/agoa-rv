@@ -1,1 +1,1 @@
-Déploiement n°26 — Import de plans PDF : choix des pages ; accueil : accès direct aux opérations en cours
+Déploiement n°27 — Plans : plusieurs repères par point (pastilles, flèches, rectangles de localisation) ; photos : zoom et recadrage
