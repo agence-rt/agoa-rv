@@ -530,6 +530,7 @@ const dPath = (id = S.cur) => "dossiers/" + id;
 const sortedPvs = () => [...S.pvs].sort((a, b) => a.num - b.num);
 const curPv = () => { const l = sortedPvs(); if (!l.length) return null; return l.find(p => p.id === S.pvSel) || l[l.length - 1]; };
 // Lignes de présence : chaque intervenant, puis les autres personnes du même lot (i.autres). Clé de présence : id, ou id.idPersonne.
+const persLine = a => [a.role, a.contact].filter(Boolean).map(esc).join(" - ") || "Autre personne";
 const presRows = (list, only) => list.filter(i => !only || i.id === only).flatMap(i => [{ key: i.id, int: i, pers: null, conv: i.convoque !== false }].concat((i.autres || []).map(a => ({ key: i.id + "." + a.id, int: i, pers: a, conv: a.convoque !== false }))));
 const ints = (d = D()) => [...(d?.intervenants || [])].sort((a, b) => (parseFloat(a.lot) || 999) - (parseFloat(b.lot) || 999) || String(a.lot).localeCompare(String(b.lot)));
 function prof(d = D()) {
@@ -716,9 +717,9 @@ function viewReunion(d) {
     <div class="sec-h"><h3>Intervenants</h3><span class="hint">Présence souhaitée, présence effective et convocation à la prochaine réunion</span></div>
     <div class="scroll-x"><table class="t">
       <thead><tr><th>Lot</th><th>Intervenant</th><th>Contact</th><th class="c">Convoqué</th><th class="c">Présent</th><th class="c">Prochaine réunion</th></tr></thead>
-      <tbody>${presRows(ints(d)).map(r => { const i = r.int; const p = pres[r.key] || { c: r.conv, p: false, n: r.conv }; const nm = r.pers ? (r.pers.contact || "Autre personne") : i.nom; return `
+      <tbody>${presRows(ints(d)).map(r => { const i = r.int; const p = pres[r.key] || { c: r.conv, p: false, n: r.conv }; const nm = i.nom; return `
         <tr><td><span class="lot" style="background:${lotColor(i.lot)}">${esc(i.lot)}</span></td>
-        <td><div style="display:flex;gap:8px;align-items:center">${i.logo && !r.pers ? `<img class="ilogo" src="${i.logo}" alt="">` : ""}<div><b>${esc(nm)}</b><div class="small muted">${r.pers ? `${esc(i.nom)}${r.pers.role ? " — " + esc(r.pers.role) : ""}` : `${esc(i.role || "")}${i.contact ? " — " + esc(i.contact) : ""}`}</div></div></div></td>
+        <td><div style="display:flex;gap:8px;align-items:center">${i.logo && !r.pers ? `<img class="ilogo" src="${i.logo}" alt="">` : ""}<div><b>${esc(nm)}</b><div class="small muted">${r.pers ? persLine(r.pers) : `${esc(i.role || "")}${i.contact ? " — " + esc(i.contact) : ""}`}</div></div></div></td>
         <td class="small">${esc((r.pers || i).tel || "")}<br>${esc((r.pers || i).email || "")}</td>
         ${["c", "p", "n"].map(k => `<td class="c"><input type="checkbox" class="chk" data-pres="${r.key}:${k}" ${p[k] ? "checked" : ""} ${dis} aria-label="${({ c: "Convoqué", p: "Présent", n: "Prochaine réunion" })[k]} — ${esc(nm)}"></td>`).join("")}</tr>`; }).join("")}
       </tbody></table></div>
@@ -2160,7 +2161,7 @@ function docHTML(pv, R = REP_DEFAULT) {
     <div style="color:#444;font-size:11.5px;margin-top:2px">${[d.moa && "Maître d'ouvrage : " + d.moa, d.syndic && "Syndic : " + d.syndic + (d.gestionnaire ? " (" + d.gestionnaire + ")" : ""), "Réf. " + d.code].filter(Boolean).map(esc).join(" — ")}</div>
     <div class="band">Intervenants convoqués</div>
     <table class="it"><thead><tr><th style="text-align:left">Intervenant</th><th style="text-align:left">Contact</th><th>Convoqué</th><th>Présent</th><th>Prochaine<br>réunion</th></tr></thead><tbody>
-      ${presRows(list).map(r => { const i = r.int; const p = pres[r.key] || { c: r.conv, p: false, n: r.conv }; const x = r.pers || i; return `<tr><td><div style="display:flex;gap:6px;align-items:flex-start"><span class="lot" style="background:${lotColor(i.lot)};min-width:20px;height:20px;font-size:11px">${esc(i.lot)}</span><div>${r.pers ? `<b>${esc(r.pers.contact || "Autre personne")}</b><br>${esc(i.nom)}${r.pers.role ? " — " + esc(r.pers.role) : ""}` : `<b>${esc(i.nom)}</b>${i.role ? `<br>${esc(i.role)}` : ""}${i.contact ? `<br>${esc(i.contact)}` : ""}`}</div></div></td><td>${esc(x.tel || "")}${x.tel && x.email ? "<br>" : ""}${esc(x.email || "")}</td><td class="c">${box(p.c)}</td><td class="c">${box(p.p)}</td><td class="c">${box(p.n)}</td></tr>`; }).join("")}
+      ${presRows(list).map(r => { const i = r.int; const p = pres[r.key] || { c: r.conv, p: false, n: r.conv }; const x = r.pers || i; return `<tr><td><div style="display:flex;gap:6px;align-items:flex-start"><span class="lot" style="background:${lotColor(i.lot)};min-width:20px;height:20px;font-size:11px">${esc(i.lot)}</span><div>${r.pers ? `<b>${esc(i.nom)}</b><br>${persLine(r.pers)}` : `<b>${esc(i.nom)}</b>${i.role ? `<br>${esc(i.role)}` : ""}${i.contact ? `<br>${esc(i.contact)}` : ""}`}</div></div></td><td>${esc(x.tel || "")}${x.tel && x.email ? "<br>" : ""}${esc(x.email || "")}</td><td class="c">${box(p.c)}</td><td class="c">${box(p.p)}</td><td class="c">${box(p.n)}</td></tr>`; }).join("")}
     </tbody></table>
     <h2>Prochaine réunion</h2>
     ${nextTxt ? `<p><span class="hl">${nextTxt}</span></p>` : ""}${d.reunionTexte ? `<p><span class="hl">${esc(d.reunionTexte)}</span></p>` : ""}
