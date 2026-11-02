@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°38** — v0.38.0 — 2026-11-02 — Enregistrer envoie vers Dropbox (état affiché) ; rattachement automatique d'un .pv ouvert à son fichier Dropbox ; bouton « Prendre une photo » sur téléphone
 - **n°37** — v0.37.0 — 2026-11-02 — Dropbox : clé d'application intégrée (connexion directe depuis le téléphone)
 - **n°36** — v0.36.0 — 2026-11-02 — Synchronisation Dropbox de la version mobile (connexion sécurisée, envoi automatique, conflits sans perte) ; Windows : reprise d'un .pv modifié ailleurs
 - **n°35** — v0.35.0 — 2026-11-02 — Version mobile (PWA Android / iPhone) : stockage sur l'appareil, hors connexion, échange de dossiers .pv, mises à jour automatiques

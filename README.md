@@ -51,7 +51,7 @@ Le poste Windows continue d'écrire son `.pv` comme avant ; Dropbox fait le lien
 5. Sur le téléphone : bouton *Connecter Dropbox*, autoriser. Le bouton devient *Dossiers Dropbox* : liste de tous les `.pv`, *Télécharger*.
 
 **Fonctionnement**
-- Un dossier téléchargé est lié à son fichier Dropbox. Modification sur le téléphone : envoi 20 s plus tard (ou à la mise en veille de l'application).
+- Un dossier téléchargé, ou ouvert depuis un fichier .pv portant le même nom qu'un fichier Dropbox, est lié à ce fichier. Modification sur le téléphone : envoi 8 s plus tard, ou immédiatement avec le bouton *Enregistrer* (l'étiquette indique « Dropbox ✓ à jour », « en attente » ou « non lié »).
   Réception : à l'ouverture de l'application, au retour du réseau, ou par *Synchroniser*.
 - Modifié des deux côtés : le téléphone demande quelle version garder ; l'autre est conservée à côté dans Dropbox (`… (version téléphone AAAA-MM-JJ HHhMM).pv`).
 - Opération créée sur le téléphone : envoyée dans le dossier indiqué dans Options › Dropbox (facultatif).
