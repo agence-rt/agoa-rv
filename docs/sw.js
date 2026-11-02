@@ -1,7 +1,7 @@
 "use strict";
 /* AGOA PV — service worker (fonctionnement hors connexion et mises à jour).
    VERSION est réécrite par `npm run deploy` : un nouveau déploiement = un nouveau cache = une mise à jour proposée à l'utilisateur. */
-const VERSION = "agoa-pv-n36";
+const VERSION = "agoa-pv-n37";
 const EXT = "agoa-pv-ext";                     // ressources externes (polices, pdf.js) : conservées d'une version à l'autre
 const CORE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png"];
 const PRE_EXT = [
