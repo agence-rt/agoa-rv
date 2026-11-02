@@ -1,1 +1,1 @@
-Déploiement n°35 — Version mobile (PWA Android / iPhone) : stockage sur l'appareil, hors connexion, échange de dossiers .pv, mises à jour automatiques
+Déploiement n°36 — Synchronisation Dropbox de la version mobile (connexion sécurisée, envoi automatique, conflits sans perte) ; Windows : reprise d'un .pv modifié ailleurs

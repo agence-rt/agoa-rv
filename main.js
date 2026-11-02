@@ -441,6 +441,10 @@ ipcMain.handle("save-as", async (e, filename, text) => {
   writeAtomic(r.filePath, text);
   return r.filePath;
 });
+ipcMain.handle("read-file", async (e, file) => {
+  if (!/\.pv$/i.test(file)) throw new Error("Seuls les fichiers .pv peuvent être lus");
+  try { return fs.readFileSync(file, "utf8"); } catch { return null; }
+});
 ipcMain.handle("write-file", async (e, file, text) => {
   if (!/\.pv$/i.test(file)) throw new Error("Seuls les fichiers .pv peuvent être écrits");
   writeAtomic(file, text);

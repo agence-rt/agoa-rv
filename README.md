@@ -37,6 +37,26 @@ Adresse : `https://agence-rt.github.io/agoa-rv/`
 - **Mises à jour** : `npm run deploy` + `git push` met aussi à jour `docs/` ; le téléphone propose « Nouvelle version disponible » à l'ouverture suivante.
 - Pas de recherche Ragic ni de baguette IA dans cette version : créer l'opération sous Windows, puis l'ouvrir sur le téléphone.
 
+### Synchronisation Dropbox (version mobile)
+
+Le téléphone lit et écrit directement les fichiers `.pv` rangés dans Dropbox (`… / 03 - CHANTIER / 02 - VIE DE CHANTIER / PV /`).
+Le poste Windows continue d'écrire son `.pv` comme avant ; Dropbox fait le lien entre les deux.
+
+**Mise en place (une seule fois)**
+1. https://www.dropbox.com/developers/apps › *Create app* › *Scoped access* › *Full Dropbox*, nom au choix (ex. « AGOA PV agence »).
+2. Onglet *Permissions* : cocher `account_info.read`, `files.metadata.read`, `files.content.read`, `files.content.write`, puis *Submit*.
+3. Onglet *Settings* › *Redirect URIs* : ajouter `https://agence-rt.github.io/agoa-rv/` (exactement, avec la barre finale).
+4. Copier l'*App key* (publique, pas de secret) dans `const DBX_KEY = "";` en haut du module Dropbox de `app/index.html`
+   (ou la saisir sur chaque téléphone : Options › Dropbox).
+5. Sur le téléphone : bouton *Connecter Dropbox*, autoriser. Le bouton devient *Dossiers Dropbox* : liste de tous les `.pv`, *Télécharger*.
+
+**Fonctionnement**
+- Un dossier téléchargé est lié à son fichier Dropbox. Modification sur le téléphone : envoi 20 s plus tard (ou à la mise en veille de l'application).
+  Réception : à l'ouverture de l'application, au retour du réseau, ou par *Synchroniser*.
+- Modifié des deux côtés : le téléphone demande quelle version garder ; l'autre est conservée à côté dans Dropbox (`… (version téléphone AAAA-MM-JJ HHhMM).pv`).
+- Opération créée sur le téléphone : envoyée dans le dossier indiqué dans Options › Dropbox (facultatif).
+- Windows : au retour dans la fenêtre ou à l'ouverture d'un dossier, AGOA PV relit le `.pv` et reprend son contenu s'il a été modifié ailleurs.
+
 ## Mises à jour
 
 Au lancement, pendant l'écran de démarrage « AGOA PV CHANTIER », l'application interroge

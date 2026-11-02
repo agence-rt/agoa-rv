@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("agoa", {
   savePDF: filename => ipcRenderer.invoke("save-pdf", filename),
   saveAs: (filename, text) => ipcRenderer.invoke("save-as", filename, text),
   writeFile: (file, text) => ipcRenderer.invoke("write-file", file, text),
+  readFile: file => ipcRenderer.invoke("read-file", file),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
   ai: prompt => ipcRenderer.invoke("ai", prompt),
   onOpenFile: cb => ipcRenderer.on("open-file", (e, name, text, file) => cb(name, text, file))
