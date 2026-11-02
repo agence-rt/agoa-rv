@@ -24,6 +24,19 @@ elle n'est jamais envoyée sur GitHub.
 **Assistant de rédaction (IA)** : la baguette magique de la barre de mise en forme reformule un texte. Sur Windows, elle utilise une clé API Anthropic
 à saisir dans **Options › Assistant de rédaction (IA)** (facturée sur ce compte API, stockée sur le poste). Dans la version Claude, aucune clé n'est nécessaire.
 
+## Version mobile (PWA : Android et iPhone)
+
+La même interface est publiée comme application web installable dans le dossier `docs/` (GitHub Pages).
+Adresse : `https://agence-rt.github.io/agoa-rv/`
+
+- **Activation (une seule fois)** : dépôt GitHub › Settings › Pages › Source « Deploy from a branch », branche `main`, dossier `/docs`.
+- **Installer sur le téléphone** : iPhone (Safari) : Partager › Sur l'écran d'accueil. Android (Chrome) : menu ⋮ › Installer l'application.
+- **Données** : enregistrées sur l'appareil (IndexedDB), utilisables sans connexion. Échange avec Windows par fichier `.pv` :
+  « Exporter / partager le dossier (.pv) » (feuille de partage : Dropbox, Mail, Fichiers…) puis « Ouvrir opération » de l'autre côté.
+  Si le fichier ouvert est plus récent, le dossier est mis à jour ; un avertissement s'affiche si l'appareil contient des saisies non exportées.
+- **Mises à jour** : `npm run deploy` + `git push` met aussi à jour `docs/` ; le téléphone propose « Nouvelle version disponible » à l'ouverture suivante.
+- Pas de recherche Ragic ni de baguette IA dans cette version : créer l'opération sous Windows, puis l'ouvrir sur le téléphone.
+
 ## Mises à jour
 
 Au lancement, pendant l'écran de démarrage « AGOA PV CHANTIER », l'application interroge

@@ -25,6 +25,17 @@ let html = fs.readFileSync(htmlPath, "utf8");
 html = html.replace(/(const APP = \{[^}]*version: )"[^"]*"(, deploiement: )\d+/, `$1"${version}"$2${n}`);
 fs.writeFileSync(htmlPath, html);
 
+// Version mobile (PWA, publiée par GitHub Pages depuis le dossier docs/) :
+// copie de l'interface + nouveau nom de cache, ce qui déclenche « Nouvelle version disponible » sur les téléphones.
+const docsDir = path.join(root, "docs");
+if (fs.existsSync(docsDir)) {
+  fs.writeFileSync(path.join(docsDir, "index.html"), html);
+  const swPath = path.join(docsDir, "sw.js");
+  if (fs.existsSync(swPath)) {
+    fs.writeFileSync(swPath, fs.readFileSync(swPath, "utf8").replace(/const VERSION = "[^"]*";/, `const VERSION = "agoa-pv-n${n}";`));
+  }
+}
+
 const date = new Date().toISOString().slice(0, 10);
 const log = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "# Déploiements AGOA PV\n\n";
 fs.writeFileSync(logPath, log.replace(/(# Déploiements AGOA PV\n\n)/, `$1- **n°${n}** — v${version} — ${date} — ${note}\n`));
