@@ -1546,7 +1546,7 @@ function viewIntervenants(d) {
       <div style="display:flex;gap:8px;flex-wrap:wrap">${CAP.mcp && d.code ? `<button class="btn" data-act="ragic-complete">Compléter depuis Ragic</button>` : ""}${CAP.mcp ? `<button class="btn" data-act="ent-search">Entreprise Ragic</button>` : ""}<button class="btn primary" data-act="int-add">${ICON.plus}Intervenant</button></div></div>
     <div class="sec-b small muted" style="padding-bottom:0">Le numéro de lot sert à numéroter les points (lot 3 → 3.01, 3.02…). La case « Convoqué » fixe la valeur par défaut des nouvelles réunions. Le bouton « Personne » ajoute un autre interlocuteur du même lot (présence et convocation suivies séparément ; les points restent attribués au lot).</div>
     <div class="scroll-x"><table class="t" style="margin-top:8px">
-      <thead><tr><th style="width:70px">Lot</th><th>Nom / entreprise</th><th>Corps d'état / rôle</th><th>Contact</th><th>Téléphone</th><th>E-mail</th><th>Logo</th><th class="c">Convoqué</th><th></th></tr></thead>
+      <thead><tr><th style="width:70px">Lot</th><th style="min-width:240px">Nom / entreprise</th><th style="min-width:200px">Corps d'état / rôle</th><th style="min-width:180px">Contact</th><th style="min-width:140px">Téléphone</th><th style="min-width:260px">E-mail</th><th>Logo</th><th class="c">Convoqué</th><th></th></tr></thead>
       <tbody>${list.map(i => `<tr>
         <td><input type="text" data-int-f="${i.id}:lot" value="${esc(i.lot)}" style="width:56px;text-align:center;font-weight:700;border-left:5px solid ${lotColor(i.lot)}"></td>
         <td><input type="text" data-int-f="${i.id}:nom" value="${esc(i.nom)}" list="dlEnt" autocomplete="off"></td>
@@ -1691,7 +1691,7 @@ async function onMainClick(e) {
     "plan-anno": () => openAnno(t.dataset.id, false, "plan"),
     "plan-crop": () => openCrop(t.dataset.id, "plan"),
     "ph-move": () => movePhoto(t.dataset.id, +t.dataset.dir),
-    "int-add": () => addInt(),
+    "int-add": () => openIntPicker(),
     "pers-add": () => addPers(t.dataset.id),
     "pers-del": () => delPers(t.dataset.id, t.dataset.pid),
     "int-del": () => delInt(t.dataset.id),
@@ -1861,6 +1861,60 @@ async function decide(id, v) {
   await safe(Store.update(dPath() + "/points/" + id, { events: ev }));
 }
 
+function nextLot() { const list = (D().intervenants || []); return String(Math.max(0, ...list.map(i => parseInt(i.lot, 10) || 0)) + 1); }
+function openIntPicker() {
+  const L = $("#layer"); const d = D(); const here = new Set((d.intervenants || []).map(i => normK(i.nom)));
+  const ents = Object.values(annuaire()).filter(e => e.nom && !here.has(normK(e.nom))).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  const close = () => { L.innerHTML = ""; };
+  const shell = (title, body) => { L.innerHTML = `<div class="ov-bg" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal" style="max-width:640px"><div class="modal-h"><h3>${esc(title)}</h3><button class="btn ghost" data-x>Fermer</button></div><div class="modal-b">${body}</div></div></div>`; L.querySelector("[data-x]").onclick = close; L.querySelector(".ov-bg").addEventListener("keydown", ev => { if (ev.key === "Escape") close(); }); };
+  const home = () => {
+    shell("Ajouter un intervenant", `<button class="btn primary" data-new style="width:100%;justify-content:center;margin-bottom:12px">${ICON.plus}Créer un nouvel intervenant</button>
+      <div class="small muted" style="margin-bottom:6px">…ou choisir une entreprise déjà utilisée sur un autre chantier :</div>
+      <input type="search" data-q placeholder="Rechercher une entreprise (premières lettres)" aria-label="Rechercher une entreprise" autocomplete="off">
+      <div class="res" data-list style="margin-top:8px;max-height:46vh;overflow:auto"></div>`);
+    const q = L.querySelector("[data-q]"), box = L.querySelector("[data-list]");
+    const draw = () => { const v = normK(q.value); const f = ents.filter(e => !v || normK(e.nom).includes(v) || normK(e.role).includes(v));
+      box.innerHTML = f.length ? f.map(e => { const k = normK(e.nom); const n = (e.autres || []).length; return `<button data-k="${esc(k)}" ${here.has(k) ? "disabled" : ""}><div class="c">${esc(e.nom)}${here.has(k) ? ' <span class="small muted">(déjà sur ce chantier)</span>' : ""}</div><div class="o">${esc([e.role, e.contact].filter(Boolean).join(" - "))}${n ? ` · +${n} autre${n > 1 ? "s" : ""} personne${n > 1 ? "s" : ""}` : ""}</div></button>`; }).join("") : `<div class="msg">${ents.length ? "Aucune entreprise ne correspond." : "Aucune entreprise mémorisée pour l'instant : créez un nouvel intervenant."}</div>`;
+      box.querySelectorAll("[data-k]").forEach(b => b.onclick = () => existing(b.dataset.k)); };
+    q.oninput = draw; draw(); q.focus();
+    L.querySelector("[data-new]").onclick = create;
+  };
+  const existing = k => {
+    const e = annuaire()[k]; if (!e) return home();
+    const persons = [{ id: "main", label: [e.role, e.contact].filter(Boolean).join(" - ") || "Contact principal", sub: [e.tel, e.email].filter(Boolean).join(" · "), main: true }].concat((e.autres || []).map((a, n) => ({ id: "a" + n, label: [a.role, a.contact].filter(Boolean).join(" - ") || "Autre personne", sub: [a.tel, a.email].filter(Boolean).join(" · "), a })));
+    shell(e.nom, `<div class="small muted" style="margin-bottom:8px">Personnes rattachées à cette entreprise — décochez celles qui ne participent pas à ce chantier :</div>
+      <div style="display:grid;gap:6px">${persons.map(x => `<label style="display:flex;gap:8px;align-items:flex-start;padding:8px;border:1px solid var(--rule);border-radius:8px"><input type="checkbox" class="chk" data-p="${x.id}" checked><span><b>${esc(x.label)}</b>${x.sub ? `<br><span class="small muted">${esc(x.sub)}</span>` : ""}</span></label>`).join("")}</div>
+      <label class="f" style="margin-top:12px;max-width:160px">N° de lot<input type="text" data-lot value="${esc(nextLot())}"></label>
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px"><button class="btn" data-back>← Retour</button><button class="btn primary" data-ok>Ajouter au chantier</button></div>`);
+    L.querySelector("[data-back]").onclick = home;
+    L.querySelector("[data-ok]").onclick = () => {
+      const on = id => L.querySelector(`[data-p="${id}"]`).checked;
+      const lot = L.querySelector("[data-lot]").value.trim() || nextLot();
+      const mainOn = on("main");
+      const autres = persons.filter(x => x.a && on(x.id)).map(x => ({ id: uid(), ...x.a, convoque: true }));
+      const dd = D(); saveDossier({ intervenants: [...(dd.intervenants || []), { id: uid(), lot, nom: e.nom, role: e.role || "", contact: mainOn ? (e.contact || "") : "", tel: mainOn ? (e.tel || "") : "", email: mainOn ? (e.email || "") : "", logo: e.logo || "", convoque: true, autres }] });
+      close(); toast(e.nom + " ajouté");
+    };
+  };
+  const create = () => {
+    shell("Nouvel intervenant", `<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <label class="f" style="grid-column:1/-1">Nom de l'entreprise<input type="text" data-f="nom" placeholder="Nom de l'entreprise" autocomplete="off"></label>
+      <label class="f">Corps d'état / rôle<input type="text" data-f="role"></label>
+      <label class="f">N° de lot<input type="text" data-f="lot" value="${esc(nextLot())}"></label>
+      <label class="f">Contact<input type="text" data-f="contact"></label>
+      <label class="f">Téléphone<input type="tel" data-f="tel"></label>
+      <label class="f" style="grid-column:1/-1">E-mail<input type="email" data-f="email"></label></div>
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px"><button class="btn" data-back>← Retour</button><button class="btn primary" data-ok>Créer l'intervenant</button></div>`);
+    const f = k => L.querySelector(`[data-f="${k}"]`); f("nom").focus();
+    L.querySelector("[data-back]").onclick = home;
+    L.querySelector("[data-ok]").onclick = () => {
+      const nom = f("nom").value.trim(); if (!nom) { f("nom").focus(); return; }
+      const dd = D(); saveDossier({ intervenants: [...(dd.intervenants || []), { id: uid(), lot: f("lot").value.trim() || nextLot(), nom, role: f("role").value.trim(), contact: f("contact").value.trim(), tel: f("tel").value.trim(), email: f("email").value.trim(), logo: "", convoque: true }] });
+      rememberAnnuaire(); close(); toast(nom + " ajouté");
+    };
+  };
+  home();
+}
 function addInt() {
   const d = D(); const list = d.intervenants || [];
   const lot = String(Math.max(0, ...list.map(i => parseInt(i.lot, 10) || 0)) + 1);
