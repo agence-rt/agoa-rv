@@ -1,1 +1,1 @@
-Déploiement n°38 — Enregistrer envoie vers Dropbox (état affiché) ; rattachement automatique d'un .pv ouvert à son fichier Dropbox ; bouton « Prendre une photo » sur téléphone
+Déploiement n°39 — Intervenants : annuaire des entreprises/personnes déjà utilisées, liste de suggestions et remplissage automatique
