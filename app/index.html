@@ -1538,7 +1538,10 @@ function gotoPoint(id) {
 /* ---------- Intervenants ---------- */
 function viewIntervenants(d) {
   const list = ints(d);
-  return `<section class="sec">
+  const ann = annuaire(); const annE = Object.values(ann).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  return `<datalist id="dlEnt">${annE.map(e => `<option value="${esc(e.nom)}">${esc([e.role, e.contact].filter(Boolean).join(" - "))}</option>`).join("")}</datalist>
+  <datalist id="dlPers">${annE.flatMap(e => (e.autres || []).filter(a => a.contact).map(a => `<option value="${esc(a.contact)}">${esc(e.nom + (a.role ? " — " + a.role : ""))}</option>`)).join("")}</datalist>
+  <section class="sec">
     <div class="sec-h"><h3>Intervenants du chantier</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${CAP.mcp && d.code ? `<button class="btn" data-act="ragic-complete">Compléter depuis Ragic</button>` : ""}${CAP.mcp ? `<button class="btn" data-act="ent-search">Entreprise Ragic</button>` : ""}<button class="btn primary" data-act="int-add">${ICON.plus}Intervenant</button></div></div>
     <div class="sec-b small muted" style="padding-bottom:0">Le numéro de lot sert à numéroter les points (lot 3 → 3.01, 3.02…). La case « Convoqué » fixe la valeur par défaut des nouvelles réunions. Le bouton « Personne » ajoute un autre interlocuteur du même lot (présence et convocation suivies séparément ; les points restent attribués au lot).</div>
@@ -1546,7 +1549,7 @@ function viewIntervenants(d) {
       <thead><tr><th style="width:70px">Lot</th><th>Nom / entreprise</th><th>Corps d'état / rôle</th><th>Contact</th><th>Téléphone</th><th>E-mail</th><th>Logo</th><th class="c">Convoqué</th><th></th></tr></thead>
       <tbody>${list.map(i => `<tr>
         <td><input type="text" data-int-f="${i.id}:lot" value="${esc(i.lot)}" style="width:56px;text-align:center;font-weight:700;border-left:5px solid ${lotColor(i.lot)}"></td>
-        <td><input type="text" data-int-f="${i.id}:nom" value="${esc(i.nom)}"></td>
+        <td><input type="text" data-int-f="${i.id}:nom" value="${esc(i.nom)}" list="dlEnt" autocomplete="off"></td>
         <td><input type="text" data-int-f="${i.id}:role" value="${esc(i.role || "")}"></td>
         <td><input type="text" data-int-f="${i.id}:contact" value="${esc(i.contact || "")}"></td>
         <td><input type="tel" data-int-f="${i.id}:tel" value="${esc(i.tel || "")}"></td>
@@ -1557,7 +1560,7 @@ function viewIntervenants(d) {
         <td style="text-align:right;color:var(--ink-3)" title="Même lot">↳</td>
         <td><span class="small muted">${esc(i.nom)} — même lot</span></td>
         <td><input type="text" data-pers-f="${i.id}:${a.id}:role" value="${esc(a.role || "")}" placeholder="Fonction"></td>
-        <td><input type="text" data-pers-f="${i.id}:${a.id}:contact" value="${esc(a.contact || "")}" placeholder="Nom de la personne"></td>
+        <td><input type="text" data-pers-f="${i.id}:${a.id}:contact" value="${esc(a.contact || "")}" placeholder="Nom de la personne" list="dlPers" autocomplete="off"></td>
         <td><input type="tel" data-pers-f="${i.id}:${a.id}:tel" value="${esc(a.tel || "")}"></td>
         <td><input type="email" data-pers-f="${i.id}:${a.id}:email" value="${esc(a.email || "")}"></td>
         <td></td>
@@ -1727,8 +1730,8 @@ async function onMainChange(e) {
   if (ds.todo) { const [pid, tid] = ds.todo.split(":"); const p = S.points.find(x => x.id === pid); return setTodo(pid, (p.todo || []).map(x => x.id === tid ? { ...x, done: t.checked } : x)); }
   if (ds.photos) { const files = [...t.files]; t.value = ""; return addPhotos(ds.photos, files); }
   if ("pfNewphotos" in ds) { const files = [...t.files]; t.value = ""; if (!S.edit) return; S.edit.files = [...(S.edit.files || []), ...files.map(file => ({ file, url: URL.createObjectURL(file) }))]; refreshNewPhotos(); return; }
-  if (ds.persF) { const [iid, pid, k] = ds.persF.split(":"); return setPersField(iid, pid, k, t.type === "checkbox" ? t.checked : t.value.trim()); }
-  if (ds.intF) { const [iid, k] = ds.intF.split(":"); return setIntField(iid, k, t.type === "checkbox" ? t.checked : t.value.trim()); }
+  if (ds.persF) { const [iid, pid, k] = ds.persF.split(":"); if (k === "contact" && applyPersonne(iid, pid, t.value)) return; setPersField(iid, pid, k, t.type === "checkbox" ? t.checked : t.value.trim()); return rememberAnnuaire(); }
+  if (ds.intF) { const [iid, k] = ds.intF.split(":"); if (k === "nom" && applyEntreprise(iid, t.value)) return; setIntField(iid, k, t.type === "checkbox" ? t.checked : t.value.trim()); return rememberAnnuaire(); }
   if (ds.intLogo) { const f = t.files[0]; t.value = ""; if (f) { const url = await imgToDataUrl(f, 240, "image/png"); setIntField(ds.intLogo, "logo", url); } return; }
   if (ds.plan) { const [rid, k] = ds.plan.split(":"); return saveDossier({ planning: (d.planning || []).map(r => r.id === rid ? { ...r, [k]: t.value } : r) }); }
   if ("actAg" in ds) { const old = prof(d).nom; const nw = prof({ agence: t.value }).nom; return saveDossier({ agence: t.value, intervenants: (d.intervenants || []).map(i => i.nom === old ? { ...i, nom: nw } : i) }); }
@@ -1864,6 +1867,35 @@ function addInt() {
   saveDossier({ intervenants: [...list, { id: uid(), lot, nom: "Nouvelle entreprise", role: "", contact: "", tel: "", email: "", logo: "", convoque: true }] });
 }
 function addPers(iid) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, autres: [...(i.autres || []), { id: uid(), contact: "", role: "", tel: "", email: "", convoque: true }] } : i) }); }
+/* Annuaire : mémoire de tous les intervenants déjà utilisés (dossiers existants + mémoire locale) */
+const normK = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+function annuaire() {
+  let ent = {}; try { ent = JSON.parse(localStorage.getItem("agoa.annuaire") || "{}"); } catch {}
+  for (const dd of S.dossiers || []) for (const i of dd.intervenants || []) {
+    const k = normK(i.nom); if (!k || k === "nouvelle entreprise" || !(i.role || i.contact || i.tel || i.email || (i.autres || []).length)) continue;
+    const e = ent[k] || (ent[k] = { nom: i.nom, autres: [] }); e.nom = i.nom; e.autres = e.autres || [];
+    for (const f of ["role", "contact", "tel", "email", "logo"]) if (i[f]) e[f] = i[f];
+    for (const a of i.autres || []) { if (!a.contact && !a.role) continue; const rec = { contact: a.contact || "", role: a.role || "", tel: a.tel || "", email: a.email || "" }; const j = e.autres.findIndex(x => normK(x.contact) === normK(rec.contact) && normK(x.role) === normK(rec.role)); if (j < 0) e.autres.push(rec); else e.autres[j] = rec; }
+  }
+  return ent;
+}
+function rememberAnnuaire() { try { const ent = annuaire(); for (const e of Object.values(ent)) if (e.logo && e.logo.length > 150000) delete e.logo; localStorage.setItem("agoa.annuaire", JSON.stringify(ent)); } catch {} }
+// Choix d'une entreprise connue : remplit les cases encore vides (fonction, contact, tél., e-mail, logo, autres personnes)
+function applyEntreprise(iid, nom) {
+  const e = annuaire()[normK(nom)]; const d = D(); if (!e || !d) return false;
+  const cur = (d.intervenants || []).find(x => x.id === iid); if (!cur) return false;
+  const patch = { nom: e.nom };
+  for (const f of ["role", "contact", "tel", "email", "logo"]) if (!cur[f] && e[f]) patch[f] = e[f];
+  if (!(cur.autres || []).length && (e.autres || []).length) patch.autres = e.autres.map(a => ({ id: uid(), ...a, convoque: true }));
+  saveDossier({ intervenants: d.intervenants.map(x => x.id === iid ? { ...x, ...patch } : x) }); rememberAnnuaire(); return true;
+}
+function applyPersonne(iid, pid, nom) {
+  const d = D(); const cur = (d.intervenants || []).find(x => x.id === iid); if (!cur) return false;
+  const ann = annuaire(); const k = normK(nom); const mine = ann[normK(cur.nom)];
+  const rec = ((mine && mine.autres) || []).find(a => normK(a.contact) === k) || Object.values(ann).flatMap(e => e.autres || []).find(a => normK(a.contact) === k);
+  if (!rec) return false;
+  saveDossier({ intervenants: d.intervenants.map(x => x.id === iid ? { ...x, autres: (x.autres || []).map(a => a.id === pid ? { ...a, contact: rec.contact, role: a.role || rec.role, tel: a.tel || rec.tel, email: a.email || rec.email } : a) } : x) }); rememberAnnuaire(); return true;
+}
 function setPersField(iid, pid, k, v) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, autres: (i.autres || []).map(a => a.id === pid ? { ...a, [k]: v } : a) } : i) }); }
 function delPers(iid, pid) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, autres: (i.autres || []).filter(a => a.id !== pid) } : i) }); }
 function setIntField(iid, k, v) { const d = D(); saveDossier({ intervenants: (d.intervenants || []).map(i => i.id === iid ? { ...i, [k]: v } : i) }); }
