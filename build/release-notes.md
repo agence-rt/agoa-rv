@@ -1,1 +1,1 @@
-Déploiement n°39 — Intervenants : annuaire des entreprises/personnes déjà utilisées, liste de suggestions et remplissage automatique
+Déploiement n°40 — Intervenants : fenêtre d'ajout (choisir une entreprise existante avec ses personnes, ou créer un nouvel intervenant) et colonnes élargies
