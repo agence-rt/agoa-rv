@@ -1,1 +1,1 @@
-Déploiement n°45 — Rédaction : photos et localisation sur plan ajoutables dès la rédaction d'un nouveau point ; PV imprimé : 3 photos par ligne
+Déploiement n°46 — PDF : fond blanc aussi avec « Enregistrer en PDF » ; impression sans bandes colorées sur le côté des points ; un point n'est plus coupé par un changement de page

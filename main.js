@@ -469,7 +469,10 @@ ipcMain.handle("write-file", async (e, file, text) => {
 ipcMain.handle("save-pdf", async (e, filename) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath("documents"), filename), filters: [{ name: "PDF", extensions: ["pdf"] }] });
   if (r.canceled || !r.filePath) return false;
-  const pdf = await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true });
+  // Le fond de la fenêtre (gris) est repris dans les marges du PDF : on le passe en blanc le temps de l'export.
+  const bg = "#EEF0ED"; let pdf;
+  try { win.setBackgroundColor("#FFFFFF"); pdf = await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true }); }
+  finally { try { win.setBackgroundColor(bg); } catch {} }
   fs.writeFileSync(r.filePath, pdf);
   shell.openPath(r.filePath);
   return true;
