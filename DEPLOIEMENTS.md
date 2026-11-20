@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°42** — v0.42.0 — 2026-11-20 — Impression : plus de pages blanches (les points longs se coupent entre deux pages) ; Options : coordonnées de l'agence (contact, téléphone, e-mail) reprises automatiquement dans les nouveaux dossiers
 - **n°41** — v0.41.0 — 2026-11-20 — Impression PDF : fond entièrement blanc, plus de cadre gris autour de la page
 - **n°40** — v0.40.0 — 2026-11-05 — Intervenants : fenêtre d'ajout (choisir une entreprise existante avec ses personnes, ou créer un nouvel intervenant) et colonnes élargies
 - **n°39** — v0.39.0 — 2026-11-05 — Intervenants : annuaire des entreprises/personnes déjà utilisées, liste de suggestions et remplissage automatique

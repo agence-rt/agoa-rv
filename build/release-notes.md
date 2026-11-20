@@ -1,1 +1,1 @@
-Déploiement n°41 — Impression PDF : fond entièrement blanc, plus de cadre gris autour de la page
+Déploiement n°42 — Impression : plus de pages blanches (les points longs se coupent entre deux pages) ; Options : coordonnées de l'agence (contact, téléphone, e-mail) reprises automatiquement dans les nouveaux dossiers
