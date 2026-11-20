@@ -1,1 +1,1 @@
-Déploiement n°46 — PDF : fond blanc aussi avec « Enregistrer en PDF » ; impression sans bandes colorées sur le côté des points ; un point n'est plus coupé par un changement de page
+Déploiement n°47 — Impression et PDF : numérotation des pages en pied de page (Page x / y) ; « Imprimer / PDF » ouvre un PDF numéroté sous Windows

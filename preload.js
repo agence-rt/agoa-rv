@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("agoa", {
   ragic: (tool, input) => ipcRenderer.invoke("ragic", tool, input),
   saveFile: (filename, bytes) => ipcRenderer.invoke("save-file", filename, bytes),
   savePDF: filename => ipcRenderer.invoke("save-pdf", filename),
+  printPDF: filename => ipcRenderer.invoke("print-pdf", filename),
   saveAs: (filename, text) => ipcRenderer.invoke("save-as", filename, text),
   writeFile: (file, text) => ipcRenderer.invoke("write-file", file, text),
   readFile: file => ipcRenderer.invoke("read-file", file),

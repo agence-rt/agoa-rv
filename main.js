@@ -466,16 +466,26 @@ ipcMain.handle("write-file", async (e, file, text) => {
   writeAtomic(file, text);
   return true;
 });
+// PDF de l'aperçu : fond blanc (le fond de la fenêtre est gris) et numérotation « Page x / y » en pied de page.
+async function renderPDF() {
+  const bg = "#EEF0ED";
+  const footer = '<div style="width:100%;font-size:8px;font-family:Arial,sans-serif;color:#555;text-align:center"><span class="pageNumber"></span> / <span class="totalPages"></span></div>';
+  try { win.setBackgroundColor("#FFFFFF"); return await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, displayHeaderFooter: true, headerTemplate: "<span></span>", footerTemplate: footer }); }
+  finally { try { win.setBackgroundColor(bg); } catch {} }
+}
 ipcMain.handle("save-pdf", async (e, filename) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath("documents"), filename), filters: [{ name: "PDF", extensions: ["pdf"] }] });
   if (r.canceled || !r.filePath) return false;
-  // Le fond de la fenêtre (gris) est repris dans les marges du PDF : on le passe en blanc le temps de l'export.
-  const bg = "#EEF0ED"; let pdf;
-  try { win.setBackgroundColor("#FFFFFF"); pdf = await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true }); }
-  finally { try { win.setBackgroundColor(bg); } catch {} }
-  fs.writeFileSync(r.filePath, pdf);
+  fs.writeFileSync(r.filePath, await renderPDF());
   shell.openPath(r.filePath);
   return true;
+});
+// « Imprimer / PDF » sous Windows : PDF numéroté ouvert dans la visionneuse PDF du poste, d'où l'on imprime.
+ipcMain.handle("print-pdf", async (e, filename) => {
+  const f = path.join(app.getPath("temp"), String(filename || "PV.pdf").replace(/[^\w.\-]+/g, "_"));
+  fs.writeFileSync(f, await renderPDF());
+  const err = await shell.openPath(f);
+  return err ? false : true;
 });
 // Reformulation par l'IA (baguette magique de l'éditeur) : API Claude avec la clé saisie dans Options.
 const AI_MODEL = "claude-sonnet-5-5";
