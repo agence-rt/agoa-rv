@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°41** — v0.41.0 — 2026-11-20 — Impression PDF : fond entièrement blanc, plus de cadre gris autour de la page
 - **n°40** — v0.40.0 — 2026-11-05 — Intervenants : fenêtre d'ajout (choisir une entreprise existante avec ses personnes, ou créer un nouvel intervenant) et colonnes élargies
 - **n°39** — v0.39.0 — 2026-11-05 — Intervenants : annuaire des entreprises/personnes déjà utilisées, liste de suggestions et remplissage automatique
 - **n°38** — v0.38.0 — 2026-11-02 — Enregistrer envoie vers Dropbox (état affiché) ; rattachement automatique d'un .pv ouvert à son fichier Dropbox ; bouton « Prendre une photo » sur téléphone
