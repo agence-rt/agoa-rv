@@ -1,1 +1,1 @@
-Déploiement n°44 — Photos : 3 par ligne dans la rédaction (légende et boutons d'annotation en dessous) et par défaut dans le PV imprimé
+Déploiement n°45 — Rédaction : photos et localisation sur plan ajoutables dès la rédaction d'un nouveau point ; PV imprimé : 3 photos par ligne

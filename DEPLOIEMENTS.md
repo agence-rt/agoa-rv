@@ -1,5 +1,6 @@
 # Déploiements AGOA PV
 
+- **n°45** — v0.45.0 — 2026-11-20 — Rédaction : photos et localisation sur plan ajoutables dès la rédaction d'un nouveau point ; PV imprimé : 3 photos par ligne
 - **n°44** — v0.44.0 — 2026-11-20 — Photos : 3 par ligne dans la rédaction (légende et boutons d'annotation en dessous) et par défaut dans le PV imprimé
 - **n°43** — v0.43.0 — 2026-11-20 — Rédaction : correction orthographique en français, clic droit sur un mot souligné pour choisir la correction
 - **n°42** — v0.42.0 — 2026-11-20 — Impression : plus de pages blanches (les points longs se coupent entre deux pages) ; Options : coordonnées de l'agence (contact, téléphone, e-mail) reprises automatiquement dans les nouveaux dossiers
