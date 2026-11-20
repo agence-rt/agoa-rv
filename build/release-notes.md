@@ -1,1 +1,1 @@
-Déploiement n°42 — Impression : plus de pages blanches (les points longs se coupent entre deux pages) ; Options : coordonnées de l'agence (contact, téléphone, e-mail) reprises automatiquement dans les nouveaux dossiers
+Déploiement n°43 — Rédaction : correction orthographique en français, clic droit sur un mot souligné pour choisir la correction

@@ -1,6 +1,6 @@
 "use strict";
 // AGOA PV — processus principal Electron
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, safeStorage } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, safeStorage, session } = require("electron");
 const MAC = process.platform === "darwin";
 // Releases GitHub (page de téléchargement, utilisée sur Mac où l'installation automatique demande une signature Apple)
 const RELEASES_URL = "https://github.com/agence-rt/agoa-rv/releases/latest";
@@ -370,6 +370,22 @@ function createWindow() {
   });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); return { action: "deny" }; });
   win.webContents.on("will-navigate", (e, url) => { if (!url.startsWith("file:")) { e.preventDefault(); if (/^(https?|mailto):/i.test(url)) shell.openExternal(url); } });
+  // Correction orthographique : dictionnaire français + menu clic droit (suggestions, ajout au dictionnaire, couper/copier/coller)
+  try { const ss = win.webContents.session, dispo = ss.availableSpellCheckerLanguages || []; const l = ["fr-FR", "fr"].find(x => dispo.includes(x)); ss.setSpellCheckerLanguages([l || "fr-FR"]); } catch (err) { console.error(err); }
+  win.webContents.on("context-menu", (e, p) => {
+    if (!p.isEditable && !p.selectionText) return;
+    const wc = win.webContents, items = [];
+    if (p.isEditable && p.misspelledWord) {
+      const sug = p.dictionarySuggestions || [];
+      if (sug.length) sug.slice(0, 6).forEach(w => items.push({ label: w, click: () => wc.replaceMisspelling(w) }));
+      else items.push({ label: "Aucune suggestion", enabled: false });
+      items.push({ label: "Ajouter « " + p.misspelledWord + " » au dictionnaire", click: () => wc.session.addWordToSpellCheckerDictionary(p.misspelledWord) }, { type: "separator" });
+    }
+    if (p.isEditable) items.push({ role: "undo", label: "Annuler" }, { role: "redo", label: "Rétablir" }, { type: "separator" }, { role: "cut", label: "Couper" });
+    items.push({ role: "copy", label: "Copier" });
+    if (p.isEditable) items.push({ role: "paste", label: "Coller" }, { type: "separator" }, { role: "selectAll", label: "Tout sélectionner" });
+    Menu.buildFromTemplate(items).popup({ window: win });
+  });
   win.once("ready-to-show", revealMain);
   setTimeout(revealMain, 8000); // sécurité : la fenêtre s'affiche quoi qu'il arrive
   win.webContents.on("did-finish-load", () => { ready = true; if (pendingFile) { win.webContents.send("open-file", pendingFile.name, pendingFile.text, pendingFile.file); pendingFile = null; } });
